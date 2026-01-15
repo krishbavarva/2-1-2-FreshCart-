@@ -12,12 +12,20 @@ const login = async (email, password) => {
 };
 
 const register = async (userData) => {
-  const response = await axios.post(`${API_URL}/register`, userData);
-  if (response.data.token) {
-    localStorage.setItem('user', JSON.stringify(response.data));
-    localStorage.setItem('token', response.data.token);
+  try {
+    const response = await axios.post(`${API_URL}/register`, userData);
+    if (response.data.token) {
+      localStorage.setItem('user', JSON.stringify(response.data));
+      localStorage.setItem('token', response.data.token);
+    }
+    return response.data;
+  } catch (error) {
+    // Log error for debugging
+    console.error('Registration error:', error);
+    console.error('Error response:', error.response?.data);
+    // Re-throw to let the component handle it
+    throw error;
   }
-  return response.data;
 };
 
 const logout = () => {

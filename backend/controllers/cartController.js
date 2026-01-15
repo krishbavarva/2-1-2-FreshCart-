@@ -1,4 +1,5 @@
 import Cart from '../models/Cart.js';
+import Product from '../models/Product.js';
 import { isDBConnected } from '../config/database.js';
 
 // Get user's cart
@@ -123,6 +124,28 @@ export const addToCart = async (req, res) => {
     if (!productId || !name || price === undefined) {
       return res.status(400).json({
         message: 'Product ID, name, and price are required'
+      });
+    }
+
+    // Check product stock before adding to cart
+    const product = await Product.findOne({ productId: productId });
+    
+    if (!product) {
+      return res.status(404).json({
+        message: 'Product not found'
+      });
+    }
+
+    if (product.stock === 0 || product.status === 'out_of_stock') {
+      return res.status(400).json({
+        message: 'Product is out of stock and cannot be added to cart'
+      });
+    }
+
+    const requestedQuantity = parseInt(quantity) || 1;
+    if (product.stock < requestedQuantity) {
+      return res.status(400).json({
+        message: `Only ${product.stock} items available in stock`
       });
     }
 
@@ -273,6 +296,26 @@ export const updateCartItem = async (req, res) => {
     if (!item) {
       return res.status(404).json({
         message: 'Item not found in cart'
+      });
+    }
+
+    // Check product stock before updating quantity
+    const product = await Product.findOne({ productId: item.productId });
+    if (!product) {
+      return res.status(404).json({
+        message: 'Product not found'
+      });
+    }
+
+    if (product.stock === 0 || product.status === 'out_of_stock') {
+      return res.status(400).json({
+        message: 'Product is out of stock'
+      });
+    }
+
+    if (product.stock < quantity) {
+      return res.status(400).json({
+        message: `Only ${product.stock} items available in stock`
       });
     }
 

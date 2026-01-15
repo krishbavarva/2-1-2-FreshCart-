@@ -1,5 +1,5 @@
 import express from 'express';
-import { getProducts, getProductById, searchProducts, getCategories } from '../controllers/productController.js';
+import { getProducts, getProductById, searchProducts, getCategories, toggleLike, getProductByBarcode } from '../controllers/productController.js';
 import { authenticate } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -89,6 +89,8 @@ router.get('/search', authenticate, searchProducts);
  *       200:
  *         description: Product details
  */
+router.get('/barcode/:barcode', authenticate, getProductByBarcode);
+router.post('/:id/like', authenticate, toggleLike);
 router.get('/:id', authenticate, getProductById);
 
 export default router;

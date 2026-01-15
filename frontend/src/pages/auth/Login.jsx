@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { getUserRole } from '../../utils/authHelpers';
 import toast from 'react-hot-toast';
 
 const Login = () => {
@@ -15,9 +16,31 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      const userData = await login(email, password);
       toast.success('Login successful!');
-      navigate('/products');
+      
+      // Redirect based on user role
+      const role = getUserRole({ user: userData.user || userData });
+      let redirectPath = '/products';
+      
+      switch (role) {
+        case 'customer':
+          redirectPath = '/dashboard';
+          break;
+        case 'employee':
+          redirectPath = '/employee';
+          break;
+        case 'manager':
+          redirectPath = '/manager';
+          break;
+        case 'admin':
+          redirectPath = '/admin';
+          break;
+        default:
+          redirectPath = '/products';
+      }
+      
+      navigate(redirectPath);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed. Please try again.');
     } finally {
@@ -43,7 +66,7 @@ const Login = () => {
             <h2 className="text-3xl font-extrabold text-white mb-2">
               Welcome Back!
             </h2>
-            <p className="text-green-100">
+            <p className="text-blue-100">
               Sign in to continue shopping
             </p>
           </div>
@@ -68,7 +91,7 @@ const Login = () => {
                       type="email"
                       autoComplete="email"
                       required
-                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       placeholder="you@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -91,7 +114,7 @@ const Login = () => {
                       type="password"
                       autoComplete="current-password"
                       required
-                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                      className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -127,7 +150,7 @@ const Login = () => {
               <div className="text-center">
                 <p className="text-sm text-gray-600">
                   Don't have an account?{' '}
-                  <Link to="/register" className="font-semibold text-green-600 hover:text-green-700 transition-colors">
+                  <Link to="/register" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
                     Create one now
                   </Link>
                 </p>

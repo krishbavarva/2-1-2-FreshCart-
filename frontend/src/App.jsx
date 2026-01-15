@@ -9,7 +9,19 @@ import Register from './pages/auth/Register';
 import Products from './pages/Products';
 import Cart from './pages/Cart';
 import OrderHistory from './pages/OrderHistory';
+import CustomerDashboard from './pages/CustomerDashboard';
+import EmployeeDashboard from './pages/EmployeeDashboard';
+import ManagerDashboard from './pages/ManagerDashboard';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import ProductManagement from './pages/admin/ProductManagement';
+import OrderNewItems from './pages/admin/OrderNewItems';
+import UserManagement from './pages/admin/UserManagement';
+import CreateUser from './pages/admin/CreateUser';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import AdminRoute from './components/common/AdminRoute';
+import EmployeeRoute from './components/common/EmployeeRoute';
+import ManagerRoute from './components/common/ManagerRoute';
+import CustomerRoute from './components/common/CustomerRoute';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
 
@@ -41,9 +53,9 @@ function App() {
                   <Route 
                     path="/cart" 
                     element={
-                      <ProtectedRoute>
+                      <CustomerRoute>
                         <Cart />
-                      </ProtectedRoute>
+                      </CustomerRoute>
                     } 
                   />
                   <Route 
@@ -52,6 +64,70 @@ function App() {
                       <ProtectedRoute>
                         <OrderHistory />
                       </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/dashboard" 
+                    element={
+                      <ProtectedRoute>
+                        <CustomerDashboard />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/employee" 
+                    element={
+                      <EmployeeRoute>
+                        <EmployeeDashboard />
+                      </EmployeeRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/manager" 
+                    element={
+                      <ManagerRoute>
+                        <ManagerDashboard />
+                      </ManagerRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin" 
+                    element={
+                      <AdminRoute>
+                        <AdminDashboard />
+                      </AdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin/products" 
+                    element={
+                      <AdminRoute>
+                        <ProductManagement />
+                      </AdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin/order" 
+                    element={
+                      <AdminRoute>
+                        <OrderNewItems />
+                      </AdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin/users" 
+                    element={
+                      <AdminRoute>
+                        <UserManagement />
+                      </AdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin/users/create" 
+                    element={
+                      <AdminRoute>
+                        <CreateUser />
+                      </AdminRoute>
                     } 
                   />
                   <Route path="*" element={<Navigate to="/" replace />} />

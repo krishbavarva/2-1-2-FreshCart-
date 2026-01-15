@@ -56,7 +56,7 @@ class ErrorBoundary extends React.Component {
             <div className="flex gap-4 justify-center">
               <button
                 onClick={this.handleReset}
-                className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
               >
                 Try Again
               </button>

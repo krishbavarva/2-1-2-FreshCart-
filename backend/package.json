@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "nodemon app.js",
     "start": "node app.js",
-    "test": "mocha"
+    "test": "mocha",
+    "create-admin": "node scripts/createAdmin.js",
+    "create-users": "node scripts/createUsers.js",
+    "sync-products": "node scripts/syncProducts.js"
   },
   "keywords": [],
   "author": "",

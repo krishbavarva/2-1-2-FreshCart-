@@ -17,10 +17,16 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export const getProducts = async (search = '', page = 1, category = 'all') => {
-  const response = await api.get('/', {
-    params: { search, page, category }
-  });
+export const getProducts = async (search = '', page = 1, category = 'all', filters = {}) => {
+  const params = { search, page, category };
+  
+  // Add filter parameters
+  if (filters.proteinMin) params.proteinMin = filters.proteinMin;
+  if (filters.nutriscoreGrade && filters.nutriscoreGrade !== 'all') params.nutriscoreGrade = filters.nutriscoreGrade;
+  if (filters.bestSeller === true) params.bestSeller = 'true';
+  if (filters.filter) params.filter = filters.filter;
+  
+  const response = await api.get('/', { params });
   return response.data;
 };
 
@@ -38,6 +44,16 @@ export const searchProducts = async (query) => {
 
 export const getProductById = async (id) => {
   const response = await api.get(`/${id}`);
+  return response.data;
+};
+
+export const toggleLike = async (productId) => {
+  const response = await api.post(`/${productId}/like`);
+  return response.data;
+};
+
+export const getProductByBarcode = async (barcode) => {
+  const response = await api.get(`/barcode/${barcode}`);
   return response.data;
 };
 

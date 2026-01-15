@@ -42,7 +42,17 @@ const Register = () => {
       toast.success('Registration successful!');
       navigate('/products');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
+      console.error('Registration error details:', error);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Registration failed. Please try again.';
+      toast.error(errorMessage);
+      
+      // Show additional error details if available
+      if (error.response?.data?.details) {
+        console.error('Error details:', error.response.data.details);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -66,7 +76,7 @@ const Register = () => {
             <h2 className="text-3xl font-extrabold text-white mb-2">
               Join Us Today!
             </h2>
-            <p className="text-green-100">
+            <p className="text-blue-100">
               Create your account and start shopping
             </p>
           </div>
@@ -84,7 +94,7 @@ const Register = () => {
                     name="firstName"
                     type="text"
                     required
-                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="John"
                     value={formData.firstName}
                     onChange={handleChange}
@@ -99,7 +109,7 @@ const Register = () => {
                     name="lastName"
                     type="text"
                     required
-                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="Doe"
                     value={formData.lastName}
                     onChange={handleChange}
@@ -205,7 +215,7 @@ const Register = () => {
               <div className="text-center pt-2">
                 <p className="text-sm text-gray-600">
                   Already have an account?{' '}
-                  <Link to="/login" className="font-semibold text-green-600 hover:text-green-700 transition-colors">
+                  <Link to="/login" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
                     Sign in here
                   </Link>
                 </p>

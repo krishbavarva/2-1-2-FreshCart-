@@ -11,6 +11,10 @@ import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import cartRoutes from './routes/cartRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
+import customerRoutes from './routes/customerRoutes.js';
+import employeeRoutes from './routes/employeeRoutes.js';
+import managerRoutes from './routes/managerRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -62,6 +66,12 @@ const swaggerOptions = {
 };
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerOptions));
+
+// Export OpenAPI JSON specification for Swagger Studio/SwaggerHub
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(specs);
+});
 
 // Health check
 app.get('/health', (req, res) => {
@@ -121,13 +131,21 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/customer', customerRoutes);
+app.use('/api/employee', employeeRoutes);
+app.use('/api/manager', managerRoutes);
 
 // Verify routes are registered
 const registeredRoutes = [
   { path: '/api/auth', name: 'Authentication' },
   { path: '/api/products', name: 'Products' },
   { path: '/api/cart', name: 'Shopping Cart' },
-  { path: '/api/orders', name: 'Order Management' }
+  { path: '/api/orders', name: 'Order Management' },
+  { path: '/api/admin', name: 'Admin Panel' },
+  { path: '/api/customer', name: 'Customer Dashboard' },
+  { path: '/api/employee', name: 'Employee Dashboard' },
+  { path: '/api/manager', name: 'Manager Dashboard' }
 ];
 
 console.log('\n✅ Routes registered:');

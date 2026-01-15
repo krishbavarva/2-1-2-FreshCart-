@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
@@ -14,6 +15,16 @@ export const register = async (req, res) => {
     console.log('📝 Registration attempt:', { email: req.body.email });
     const { firstName, lastName, email, password, phone, address, zipCode, city, country } = req.body;
 
+    // Check MongoDB connection first
+    if (mongoose.connection.readyState !== 1) {
+      console.error('❌ MongoDB not connected. ReadyState:', mongoose.connection.readyState);
+      return res.status(503).json({
+        message: 'Database connection error. Please check MongoDB connection.',
+        error: 'MongoDB is not connected',
+        details: 'Make sure MongoDB is running and MONGODB_URI is correct in .env file'
+      });
+    }
+
     // Validation
     if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({
@@ -27,9 +38,28 @@ export const register = async (req, res) => {
       });
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        message: 'Please provide a valid email address'
+      });
+    }
+
     // Check if user already exists
     console.log('🔍 Checking if user exists...');
-    const existingUser = await User.findOne({ email });
+    let existingUser;
+    try {
+      existingUser = await User.findOne({ email });
+    } catch (dbError) {
+      console.error('❌ Database error checking existing user:', dbError);
+      return res.status(503).json({
+        message: 'Database connection error',
+        error: dbError.message,
+        details: 'Unable to check if user exists. Please check MongoDB connection.'
+      });
+    }
+    
     if (existingUser) {
       console.log('⚠️ User already exists:', email);
       return res.status(400).json({
@@ -39,23 +69,52 @@ export const register = async (req, res) => {
     console.log('✅ User does not exist, proceeding with registration...');
 
     // Create new user
+    // IMPORTANT: Regular registration always defaults to 'customer' role
+    // Role cannot be set via regular registration endpoint
     console.log('📝 Creating new user...');
-    const user = new User({
-      firstName,
-      lastName,
-      email,
-      password,
-      phone: phone || '',
-      address: address || '',
-      zipCode: zipCode || '',
-      city: city || '',
-      country: country || ''
-    });
+    let user;
+    try {
+      user = new User({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.toLowerCase().trim(),
+        password,
+        role: 'customer', // Always set to 'customer' for regular registration
+        phone: phone ? phone.trim() : '',
+        address: address ? address.trim() : '',
+        zipCode: zipCode ? zipCode.trim() : '',
+        city: city ? city.trim() : '',
+        country: country ? country.trim() : ''
+      });
 
-    console.log('💾 Saving user to database...');
-    await user.save();
-    console.log('✅ User saved successfully:', user._id);
-    console.log('🔍 Password hash exists after save:', !!user.password);
+      console.log('💾 Saving user to database...');
+      await user.save();
+      console.log('✅ User saved successfully:', user._id);
+      console.log('🔍 Password hash exists after save:', !!user.password);
+    } catch (saveError) {
+      console.error('❌ Error saving user:', saveError);
+      
+      // Handle duplicate key error (email unique constraint)
+      if (saveError.code === 11000 || saveError.name === 'MongoServerError') {
+        return res.status(400).json({
+          message: 'User with this email already exists',
+          error: 'Duplicate email'
+        });
+      }
+      
+      // Handle validation errors
+      if (saveError.name === 'ValidationError') {
+        const validationErrors = Object.values(saveError.errors).map(err => err.message);
+        return res.status(400).json({
+          message: 'Validation error',
+          error: saveError.message,
+          details: validationErrors
+        });
+      }
+      
+      // Re-throw to be caught by outer catch
+      throw saveError;
+    }
 
     // Generate token
     const token = generateToken(user._id);
@@ -72,35 +131,49 @@ export const register = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('=== REGISTRATION ERROR ===');
+    console.error('\n=== REGISTRATION ERROR ===');
     console.error('Error name:', error.name);
     console.error('Error message:', error.message);
+    console.error('Error code:', error.code);
     console.error('Error stack:', error.stack);
     console.error('Full error:', error);
-    console.error('========================');
+    console.error('========================\n');
     
     // Check if it's a MongoDB connection error
-    if (error.name === 'MongoServerError' || error.message.includes('Mongo') || error.message.includes('connection')) {
+    if (error.name === 'MongoServerError' || 
+        error.message.includes('Mongo') || 
+        error.message.includes('connection') ||
+        error.message.includes('timeout')) {
       return res.status(503).json({
         message: 'Database connection error. Please check MongoDB connection.',
         error: error.message,
-        details: 'Make sure MongoDB Atlas is connected and MONGODB_URI is correct in .env file'
+        details: 'Make sure MongoDB is running and MONGODB_URI is correct in .env file'
       });
     }
     
     // Check if it's a validation error
     if (error.name === 'ValidationError') {
+      const validationErrors = error.errors ? Object.values(error.errors).map(err => err.message) : [error.message];
       return res.status(400).json({
         message: 'Validation error',
         error: error.message,
-        details: error.errors
+        details: validationErrors
       });
     }
     
+    // Check for duplicate key error
+    if (error.code === 11000) {
+      return res.status(400).json({
+        message: 'User with this email already exists',
+        error: 'Duplicate email'
+      });
+    }
+    
+    // Generic server error
     res.status(500).json({
       message: 'Server error during registration',
-      error: error.message,
-      errorName: error.name,
+      error: error.message || 'An unexpected error occurred',
+      errorName: error.name || 'Error',
       ...(process.env.NODE_ENV === 'development' && { 
         stack: error.stack,
         fullError: error.toString()
