@@ -96,28 +96,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Root endpoint - must respond quickly for Replit health checks
-// This responds immediately without waiting for MongoDB
-app.get('/', (req, res) => {
-  // Try to serve React app, but if not built, return simple response
-  res.sendFile(path.join(frontendBuildPath, 'index.html'), (err) => {
-    if (err) {
-      // If React app not built, return simple HTML response
-      res.status(200).send(`
-        <!DOCTYPE html>
-        <html>
-          <head><title>FreshCart - Loading</title></head>
-          <body>
-            <h1>FreshCart Server is Running</h1>
-            <p>Status: OK</p>
-            <p>Please wait while the React app is being built...</p>
-            <p>If you see this message, run: <code>cd frontend && npm run build</code></p>
-          </body>
-        </html>
-      `);
-    }
-  });
-});
 
 app.get('/api/health/db', (req, res) => {
   const status = getConnectionStatus();
@@ -159,7 +137,6 @@ console.log('   - /api/manager');
 const frontendBuildPath = path.join(__dirname, 'frontend', 'dist');
 
 // Check if React build exists
-const fs = require('fs');
 const reactBuildExists = fs.existsSync(frontendBuildPath) && fs.existsSync(path.join(frontendBuildPath, 'index.html'));
 
 if (reactBuildExists) {
@@ -169,7 +146,44 @@ if (reactBuildExists) {
   console.warn('⚠️ React build not found. Run: cd frontend && npm run build');
 }
 
-// Serve React app for all non-API routes (SPA routing)
+// Root endpoint - must respond quickly for Replit health checks
+// This responds immediately without waiting for MongoDB or React build
+app.get('/', (req, res) => {
+  // Try to serve React app if built, otherwise return simple response
+  if (reactBuildExists) {
+    res.sendFile(path.join(frontendBuildPath, 'index.html'), (err) => {
+      if (err) {
+        // Fallback if file read fails
+        res.status(200).send(`
+          <!DOCTYPE html>
+          <html>
+            <head><title>FreshCart - Loading</title></head>
+            <body>
+              <h1>FreshCart Server is Running</h1>
+              <p>Status: OK</p>
+            </body>
+          </html>
+        `);
+      }
+    });
+  } else {
+    // Return simple response if React not built yet (for health checks)
+    res.status(200).send(`
+      <!DOCTYPE html>
+      <html>
+        <head><title>FreshCart - Building</title></head>
+        <body>
+          <h1>FreshCart Server is Running</h1>
+          <p>Status: OK</p>
+          <p>Building React app... Please wait.</p>
+          <p>Run: <code>cd frontend && npm run build</code></p>
+        </body>
+      </html>
+    `);
+  }
+});
+
+// Serve React app for all other non-API routes (SPA routing)
 app.get('*', (req, res) => {
   // Don't serve React for API routes
   if (req.path.startsWith('/api')) {
@@ -183,7 +197,6 @@ app.get('*', (req, res) => {
   if (reactBuildExists) {
     res.sendFile(path.join(frontendBuildPath, 'index.html'), (err) => {
       if (err) {
-        console.error('Error serving React app:', err);
         res.status(200).send(`
           <!DOCTYPE html>
           <html>
@@ -206,7 +219,6 @@ app.get('*', (req, res) => {
           <h1>FreshCart Server is Running</h1>
           <p>Status: OK</p>
           <p>Building React app... Please wait.</p>
-          <p>Run: <code>cd frontend && npm run build</code></p>
         </body>
       </html>
     `);
