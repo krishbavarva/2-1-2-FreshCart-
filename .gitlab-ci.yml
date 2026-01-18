@@ -90,7 +90,7 @@ deploy:production:
   image: node:${NODE_VERSION}
   script:
     - echo "GitHub Deployment Ready"
-    - echo "Push to GitHub: git push github main"
+    - echo "Push to GitHub using git push github main"
   environment:
     name: production
     url: https://github.com
