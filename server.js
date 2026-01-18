@@ -42,13 +42,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// MongoDB connection
+// MongoDB connection - don't block server startup
 console.log('\n📋 Environment Check:');
 console.log('   PORT:', PORT);
 console.log('   MONGODB_URI:', process.env.MONGODB_URI ? '✅ Set' : '❌ Not set');
 console.log('   NODE_ENV:', process.env.NODE_ENV || 'development');
 
-connectDB();
+// Connect to MongoDB asynchronously (don't block server startup)
+// This allows health checks to pass even if MongoDB is still connecting
+connectDB().catch(err => {
+  console.error('MongoDB connection error (non-blocking):', err.message);
+});
 
 // Check MongoDB connection status
 const checkMongoConnection = (req, res, next) => {
