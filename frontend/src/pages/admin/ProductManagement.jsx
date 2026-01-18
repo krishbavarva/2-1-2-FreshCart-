@@ -6,14 +6,31 @@ import toast from 'react-hot-toast';
 
 const ProductManagement = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Initialize state from URL parameters
+  const getInitialLowStock = () => searchParams.get('lowStock') === 'true';
+  const getInitialOutOfStock = () => {
+    const outOfStockParam = searchParams.get('outOfStock');
+    const statusParam = searchParams.get('status');
+    return outOfStockParam === 'true' || statusParam === 'out_of_stock';
+  };
+  const getInitialStatus = () => {
+    const outOfStockParam = searchParams.get('outOfStock');
+    const statusParam = searchParams.get('status');
+    if (outOfStockParam === 'true' || statusParam === 'out_of_stock') {
+      return 'out_of_stock';
+    }
+    return 'all';
+  };
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
-  const [status, setStatus] = useState('all');
-  const [lowStock, setLowStock] = useState(false);
-  const [outOfStock, setOutOfStock] = useState(false);
+  const [status, setStatus] = useState(getInitialStatus);
+  const [lowStock, setLowStock] = useState(getInitialLowStock);
+  const [outOfStock, setOutOfStock] = useState(getInitialOutOfStock);
   const [categories, setCategories] = useState([]);
   const [editingStock, setEditingStock] = useState(null);
   const [stockQuantity, setStockQuantity] = useState('');
@@ -21,7 +38,7 @@ const ProductManagement = () => {
   const [editingPrice, setEditingPrice] = useState(null);
   const [priceValue, setPriceValue] = useState('');
 
-  // Read URL parameters on mount and when they change
+  // Read URL parameters when they change (for navigation from dashboard)
   useEffect(() => {
     const lowStockParam = searchParams.get('lowStock');
     const outOfStockParam = searchParams.get('outOfStock');
@@ -35,6 +52,11 @@ const ProductManagement = () => {
       setOutOfStock(true);
       setLowStock(false);
       setStatus('out_of_stock');
+    } else {
+      // Clear filters if no URL params
+      setLowStock(false);
+      setOutOfStock(false);
+      setStatus('all');
     }
   }, [searchParams]);
 
