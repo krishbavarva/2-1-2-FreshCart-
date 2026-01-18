@@ -1,9 +1,22 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import path from 'path';
 
-dotenv.config();
+// Get __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/grocery';
+// Load environment variables - try multiple locations
+dotenv.config(); // Root .env
+dotenv.config({ path: path.join(__dirname, '..', '..', '.env') }); // Project root .env
+dotenv.config({ path: path.join(__dirname, '..', '.env') }); // Backend .env
+
+// In Replit, environment variables come from Secrets (already in process.env)
+// This dotenv.config() is mainly for local development
+
+// Support both MONGO_URI and MONGODB_URI for compatibility
+const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/grocery';
 
 // Connection options with retry logic - optimized for Replit/cloud deployments
 const connectionOptions = {
@@ -37,7 +50,20 @@ const connectDB = async (retryCount = 0) => {
   }
 
   // Re-read MONGODB_URI from environment to ensure we have the latest value
-  const currentMongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/grocery';
+  // In Replit, this comes from Secrets, not .env file
+  // Support both MONGO_URI and MONGODB_URI for compatibility
+  const currentMongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/grocery';
+  
+  // Validate URI is set
+  if ((!process.env.MONGODB_URI && !process.env.MONGO_URI) || currentMongoUri === 'mongodb://localhost:27017/grocery') {
+    console.error('\n❌ CRITICAL: MongoDB connection string is not set!');
+    console.error('   For Replit: Go to Secrets (🔒 icon) and add:');
+    console.error('   Key: MONGODB_URI (or MONGO_URI)');
+    console.error('   Value: mongodb+srv://username:password@cluster.mongodb.net/grocery?retryWrites=true&w=majority');
+    console.error('   Make sure there are NO spaces around the = sign!');
+    console.error('   Example: MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/grocery?retryWrites=true&w=majority');
+    throw new Error('MongoDB connection string (MONGODB_URI or MONGO_URI) is required');
+  }
 
   try {
     connectionAttempts++;

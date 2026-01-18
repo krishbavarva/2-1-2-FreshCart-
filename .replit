@@ -1,4 +1,4 @@
-run = "node server.js"
+run = "npm start"
 entrypoint = "server.js"
 language = "nodejs"
 
@@ -6,7 +6,7 @@ language = "nodejs"
 channel = "stable-22_11"
 
 [deploy]
-run = ["sh", "-c", "npm install && npm run build && node server.js"]
+run = ["sh", "-c", "npm run install:all && npm run build && npm start"]
 
 [env]
 NODE_ENV = "production"

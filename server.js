@@ -1,6 +1,28 @@
 // ⚠️ CRITICAL: Load environment variables FIRST, before any other imports
 import dotenv from 'dotenv';
-dotenv.config();
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+// Get __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables - try multiple locations for Replit compatibility
+dotenv.config(); // Load from root .env (if exists)
+dotenv.config({ path: path.join(__dirname, '.env') }); // Explicit path
+dotenv.config({ path: path.join(__dirname, 'backend', '.env') }); // Backend .env
+
+// In Replit, environment variables come from Secrets, not .env file
+// But we still try to load .env for local development
+// Support both MONGO_URI and MONGODB_URI for compatibility
+const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+console.log('\n🔍 Environment Variables Check:');
+console.log('   MONGODB_URI:', mongoUri ? '✅ Found' : '❌ Missing');
+if (mongoUri) {
+  console.log('   Using:', process.env.MONGODB_URI ? 'MONGODB_URI' : 'MONGO_URI');
+}
+console.log('   PORT:', process.env.PORT || 'Not set (using default 3000)');
+console.log('   NODE_ENV:', process.env.NODE_ENV || 'Not set');
 
 import express from 'express';
 import cors from 'cors';
@@ -23,9 +45,6 @@ import customerRoutes from './backend/routes/customerRoutes.js';
 import employeeRoutes from './backend/routes/employeeRoutes.js';
 import managerRoutes from './backend/routes/managerRoutes.js';
 
-// Get __dirname equivalent for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -43,19 +62,37 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // MongoDB connection - don't block server startup
-console.log('\n📋 Environment Check:');
+// Support both MONGO_URI and MONGODB_URI for compatibility
+const mongoConnectionString = process.env.MONGODB_URI || process.env.MONGO_URI;
+
+console.log('\n📋 MongoDB Connection Check:');
 console.log('   PORT:', PORT);
-console.log('   MONGODB_URI:', process.env.MONGODB_URI ? '✅ Set' : '❌ Not set');
-if (process.env.MONGODB_URI) {
+console.log('   Connection String:', mongoConnectionString ? '✅ Found' : '❌ MISSING - ADD TO REPLIT SECRETS!');
+if (mongoConnectionString) {
   // Log connection string info (safely)
-  const uri = process.env.MONGODB_URI;
+  const uri = mongoConnectionString;
+  const varName = process.env.MONGODB_URI ? 'MONGODB_URI' : 'MONGO_URI';
+  console.log('   Variable Used:', varName);
   if (uri.includes('@')) {
     const parts = uri.split('@');
     const user = parts[0].split('://')[1]?.split(':')[0] || 'N/A';
     const host = parts[1]?.split('/')[0] || 'N/A';
+    const db = parts[1]?.split('/')[1]?.split('?')[0] || 'N/A';
     console.log('   MongoDB User:', user);
     console.log('   MongoDB Host:', host);
+    console.log('   Database:', db);
+    console.log('   Type:', uri.includes('mongodb+srv://') ? 'Atlas (Cloud)' : 'Local');
   }
+} else {
+  console.error('\n❌ CRITICAL: MongoDB connection string is NOT SET!');
+  console.error('   To fix in Replit:');
+  console.error('   1. Click the 🔒 Secrets icon (lock icon) in left sidebar');
+  console.error('   2. Click "New secret"');
+  console.error('   3. Key: MONGODB_URI (or MONGO_URI)');
+  console.error('   4. Value: mongodb+srv://username:password@cluster.mongodb.net/grocery?retryWrites=true&w=majority');
+  console.error('   5. IMPORTANT: NO SPACES around the = sign!');
+  console.error('   6. Click "Add secret"');
+  console.error('   7. Restart the server after adding\n');
 }
 console.log('   NODE_ENV:', process.env.NODE_ENV || 'development');
 console.log('   JWT_SECRET:', process.env.JWT_SECRET ? '✅ Set' : '❌ Not set');
@@ -63,15 +100,26 @@ console.log('   STRIPE_SECRET_KEY:', process.env.STRIPE_SECRET_KEY ? '✅ Set' :
 
 // Connect to MongoDB asynchronously (don't block server startup)
 // This allows health checks to pass even if MongoDB is still connecting
-console.log('\n🔄 Starting MongoDB connection (non-blocking)...');
-connectDB().catch(err => {
-  console.error('❌ MongoDB connection error (non-blocking):', err.message);
-  console.error('   The server will continue, but database features will not work.');
-  console.error('   Please check:');
-  console.error('   1. MONGODB_URI is set in Replit Secrets');
-  console.error('   2. MongoDB Atlas Network Access allows 0.0.0.0/0');
-  console.error('   3. Connection string format is correct\n');
-});
+if (mongoConnectionString) {
+  console.log('\n🔄 Starting MongoDB connection (non-blocking)...');
+  connectDB().catch(err => {
+    console.error('\n❌ MongoDB connection failed:', err.message);
+    console.error('   Error type:', err.name);
+    if (err.code) console.error('   Error code:', err.code);
+    console.error('\n   🔧 Troubleshooting Steps:');
+    console.error('   1. ✅ Verify MONGODB_URI (or MONGO_URI) is set in Replit Secrets (🔒 icon)');
+    console.error('   2. ✅ MongoDB Atlas → Network Access → Add IP: 0.0.0.0/0 (CRITICAL!)');
+    console.error('   3. ✅ Wait 2 minutes after adding IP, then restart server');
+    console.error('   4. ✅ Check connection string format (mongodb+srv://...)');
+    console.error('   5. ✅ Verify MongoDB Atlas cluster is running (not paused)');
+    console.error('   6. ✅ Check username/password are correct');
+    console.error('   7. ✅ Make sure NO SPACES around = in Replit Secrets');
+    console.error('\n   The server will continue, but database features will not work.\n');
+  });
+} else {
+  console.error('\n⚠️  Skipping MongoDB connection - connection string not set');
+  console.error('   Add MONGODB_URI (or MONGO_URI) to Replit Secrets to enable database features.\n');
+}
 
 // Check MongoDB connection status
 const checkMongoConnection = (req, res, next) => {
