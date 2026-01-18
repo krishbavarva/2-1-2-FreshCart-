@@ -129,7 +129,10 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <Link
+          to="/admin/products?lowStock=true"
+          className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-600 text-sm">Low Stock</p>
@@ -143,9 +146,12 @@ const AdminDashboard = () => {
               </svg>
             </div>
           </div>
-        </div>
+        </Link>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <Link
+          to="/admin/products?outOfStock=true"
+          className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
+        >
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-600 text-sm">Out of Stock</p>
@@ -159,7 +165,7 @@ const AdminDashboard = () => {
               </svg>
             </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Total Stock Value */}

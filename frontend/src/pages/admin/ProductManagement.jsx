@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getAdminProducts, updateStock, updatePrice, getAdminCategories } from '../../services/adminService';
 import NutriScoreBadge from '../../components/common/NutriScoreBadge';
 import toast from 'react-hot-toast';
 
 const ProductManagement = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -11,6 +13,7 @@ const ProductManagement = () => {
   const [category, setCategory] = useState('all');
   const [status, setStatus] = useState('all');
   const [lowStock, setLowStock] = useState(false);
+  const [outOfStock, setOutOfStock] = useState(false);
   const [categories, setCategories] = useState([]);
   const [editingStock, setEditingStock] = useState(null);
   const [stockQuantity, setStockQuantity] = useState('');
@@ -18,10 +21,27 @@ const ProductManagement = () => {
   const [editingPrice, setEditingPrice] = useState(null);
   const [priceValue, setPriceValue] = useState('');
 
+  // Read URL parameters on mount and when they change
+  useEffect(() => {
+    const lowStockParam = searchParams.get('lowStock');
+    const outOfStockParam = searchParams.get('outOfStock');
+    const statusParam = searchParams.get('status');
+
+    if (lowStockParam === 'true') {
+      setLowStock(true);
+      setOutOfStock(false);
+      setStatus('all');
+    } else if (outOfStockParam === 'true' || statusParam === 'out_of_stock') {
+      setOutOfStock(true);
+      setLowStock(false);
+      setStatus('out_of_stock');
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     loadProducts();
     loadCategories();
-  }, [search, category, status, lowStock]);
+  }, [search, category, status, lowStock, outOfStock]);
 
   const loadProducts = async () => {
     try {
@@ -32,6 +52,7 @@ const ProductManagement = () => {
       if (category !== 'all') params.category = category;
       if (status !== 'all') params.status = status;
       if (lowStock) params.lowStock = 'true';
+      if (outOfStock) params.status = 'out_of_stock';
 
       const data = await getAdminProducts(params);
       setProducts(data.products || []);
@@ -121,7 +142,7 @@ const ProductManagement = () => {
 
         {/* Filters Card */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
               <input
@@ -149,7 +170,15 @@ const ProductManagement = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
               <select
                 value={status}
-                onChange={(e) => setStatus(e.target.value)}
+                onChange={(e) => {
+                  setStatus(e.target.value);
+                  if (e.target.value === 'out_of_stock') {
+                    setOutOfStock(true);
+                    setLowStock(false);
+                  } else {
+                    setOutOfStock(false);
+                  }
+                }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
               >
                 <option value="all">All Status</option>
@@ -158,15 +187,38 @@ const ProductManagement = () => {
                 <option value="out_of_stock">Out of Stock</option>
               </select>
             </div>
-            <div className="flex items-end">
+            <div className="flex flex-col items-start space-y-2">
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={lowStock}
-                  onChange={(e) => setLowStock(e.target.checked)}
+                  onChange={(e) => {
+                    setLowStock(e.target.checked);
+                    if (e.target.checked) {
+                      setOutOfStock(false);
+                      setStatus('all');
+                    }
+                  }}
                   className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
                 />
                 <span className="text-sm font-medium text-gray-700">Low Stock Only (&lt; 30)</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={outOfStock}
+                  onChange={(e) => {
+                    setOutOfStock(e.target.checked);
+                    if (e.target.checked) {
+                      setLowStock(false);
+                      setStatus('out_of_stock');
+                    } else {
+                      setStatus('all');
+                    }
+                  }}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                />
+                <span className="text-sm font-medium text-gray-700">Out of Stock Only</span>
               </label>
             </div>
           </div>
