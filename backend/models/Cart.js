@@ -47,8 +47,7 @@ const cartSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
   items: [cartItemSchema],
   totalPrice: {
@@ -59,8 +58,8 @@ const cartSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Create index on user field for faster queries
-cartSchema.index({ user: 1 });
+// Note: Index on 'user' field is automatically created by unique: true
+// No need for explicit index declaration
 
 // Calculate total price before saving
 cartSchema.pre('save', async function() {

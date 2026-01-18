@@ -33,8 +33,7 @@ const productSchema = new mongoose.Schema({
   },
   barcode: {
     type: String,
-    default: '',
-    index: true
+    default: ''
   },
   stock: {
     type: Number,
@@ -149,7 +148,7 @@ const productSchema = new mongoose.Schema({
 productSchema.index({ stock: 1 });
 productSchema.index({ status: 1 });
 productSchema.index({ category: 1 });
-productSchema.index({ barcode: 1 });
+productSchema.index({ barcode: 1 }); // Index for barcode queries
 productSchema.index({ likesCount: -1 });
 productSchema.index({ salesCount: -1 });
 productSchema.index({ isBestSeller: 1 });
