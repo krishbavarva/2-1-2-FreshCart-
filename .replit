@@ -1,0 +1,13 @@
+run = "node server.js"
+entrypoint = "server.js"
+language = "nodejs"
+
+[nix]
+channel = "stable-22_11"
+
+[deploy]
+run = ["sh", "-c", "npm install && cd frontend && npm install && npm run build && cd .. && node server.js"]
+
+[env]
+NODE_ENV = "production"
+

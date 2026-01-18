@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { authService } from './authService';
+import { getApiEndpoint } from '../config/api.js';
 
-const API_URL = 'http://localhost:5000/api/orders';
+const API_URL = getApiEndpoint('orders');
 
 const api = axios.create({
   baseURL: API_URL,

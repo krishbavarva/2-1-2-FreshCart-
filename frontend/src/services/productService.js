@@ -1,7 +1,9 @@
 import axios from 'axios';
 import { authService } from './authService';
 
-const API_URL = 'http://localhost:5000/api/products';
+import { getApiEndpoint } from '../config/api.js';
+
+const API_URL = getApiEndpoint('products');
 
 // Create axios instance with auth token
 const api = axios.create({
