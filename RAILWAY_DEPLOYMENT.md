@@ -21,10 +21,16 @@ Railway runs your app in a **fresh container**, so:
     "helmet": "^7.1.0",
     "cookie-parser": "^1.4.6",
     "swagger-ui-express": "^5.0.0",
-    "swagger-jsdoc": "^6.2.8"
+    "swagger-jsdoc": "^6.2.8",
+    "jsonwebtoken": "^9.0.3",
+    "bcryptjs": "^2.4.3",
+    "express-validator": "^7.3.1",
+    "stripe": "^20.2.0"
   }
 }
 ```
+
+**Note:** This project uses `bcryptjs` (not `bcrypt`) for password hashing.
 
 **NOT in `devDependencies`!**
 
@@ -43,8 +49,8 @@ npm install dotenv --save
 | `MONGODB_URI` | Your MongoDB Atlas connection string | `mongodb+srv://user:pass@cluster.mongodb.net/grocery?retryWrites=true&w=majority` |
 | `MONGO_URI` | (Optional, for compatibility) | Same as above |
 | `PORT` | Port number (Railway sets this automatically) | `3000` |
-| `JWT_SECRET` | Your JWT secret key | `your-secret-key-here` |
-| `STRIPE_SECRET_KEY` | Your Stripe secret key | `sk_test_...` |
+| `JWT_SECRET` | Your JWT secret key (REQUIRED) | `your-secret-key-here` |
+| `STRIPE_SECRET_KEY` | Your Stripe secret key (if using Stripe) | `sk_test_...` |
 | `NODE_ENV` | Environment | `production` |
 
 **⚠️ Important:**
@@ -95,11 +101,11 @@ require('dotenv').config();
 
 ## 🔧 Troubleshooting
 
-### Error: `ERR_MODULE_NOT_FOUND: Cannot find module 'dotenv'`
+### Error: `ERR_MODULE_NOT_FOUND: Cannot find module 'dotenv'` or `'jsonwebtoken'` or `'bcryptjs'`
 
 **Fix:**
-1. Check `package.json` - `dotenv` must be in `dependencies`, not `devDependencies`
-2. Run: `npm install dotenv --save`
+1. Check `package.json` - all runtime packages must be in `dependencies`, not `devDependencies`
+2. Run: `npm install jsonwebtoken bcryptjs cors dotenv express mongoose express-validator stripe --save`
 3. Commit and push changes
 4. Redeploy on Railway
 
