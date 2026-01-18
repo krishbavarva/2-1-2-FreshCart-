@@ -1,5 +1,6 @@
 import axios from 'axios';
 import Product from '../models/Product.js';
+import User from '../models/User.js';
 
 const OPEN_FOOD_FACTS_API = 'https://world.openfoodfacts.org';
 
@@ -23,11 +24,8 @@ export const getProducts = async (req, res) => {
     const pageSize = 24;
     const skip = (parseInt(page) - 1) * pageSize;
 
-    // Build query
-    let dbQuery = {
-      stock: { $gt: 0 }, // Only show products with stock > 0 for customers
-      status: 'active'
-    };
+    // Build query - Show all products (remove status filter to show all products)
+    let dbQuery = {};
     
     if (search) {
       dbQuery.$or = [
@@ -65,7 +63,27 @@ export const getProducts = async (req, res) => {
       dbQuery.nutriscoreGrade = { $in: ['A', 'B'] }; // Only A and B grades
     }
 
-    const dbProducts = await Product.find(dbQuery)
+    // Check total products in database first
+    const totalInDB = await Product.countDocuments({});
+    console.log(`📊 Total products in database: ${totalInDB}`);
+    
+    // If database is empty, return early with helpful message
+    if (totalInDB === 0) {
+      console.log('⚠️ WARNING: Database is empty! Run: npm run sync-products');
+      return res.json({
+        products: [],
+        pagination: {
+          page: parseInt(page),
+          pageSize,
+          total: 0,
+          pages: 0
+        },
+        message: 'No products in database. Please run sync script: npm run sync-products'
+      });
+    }
+
+    // First, try with the query
+    let dbProducts = await Product.find(dbQuery)
       .sort({ 
         isBestSeller: -1, // Best sellers first
         salesCount: -1, // Then by sales count
@@ -74,45 +92,82 @@ export const getProducts = async (req, res) => {
       .skip(skip)
       .limit(pageSize);
 
+    console.log(`📦 Query returned ${dbProducts.length} products with filters`);
+
+    // If no products found with query, try without any filters
+    if (dbProducts.length === 0 && Object.keys(dbQuery).length > 0) {
+      console.log('⚠️ No products found with query, trying without filters...');
+      dbProducts = await Product.find({})
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(pageSize);
+      console.log(`📦 Without filters returned ${dbProducts.length} products`);
+    }
+
+    // Get total count
     const total = await Product.countDocuments(dbQuery);
+    
+    console.log(`✅ Final: ${dbProducts.length} products to return (query total: ${total}, DB total: ${totalInDB})`);
+
+    // Get user ID if authenticated
+    const userId = req.user?.id || null;
 
     // Format database products
-    const formattedProducts = dbProducts.map(product => ({
-      id: product._id.toString(),
-      productId: product.productId,
-      name: product.name,
-      brand: product.brand,
-      price: product.price,
-      image: product.image,
-      category: product.category,
-      barcode: product.barcode,
-      stock: product.stock,
-      unit: product.unit,
-      status: product.status,
-      description: product.description,
-      nutriscoreGrade: product.nutriscoreGrade,
-      nutriscoreScore: product.nutriscoreScore,
-      protein: product.protein,
-      nutritionalValue: product.nutritionalValue,
-      likesCount: product.likesCount,
-      isBestSeller: product.isBestSeller,
-      salesCount: product.salesCount
-    }));
+    const formattedProducts = dbProducts.map(product => {
+      const productObj = {
+        id: product._id.toString(),
+        productId: product.productId,
+        name: product.name,
+        brand: product.brand,
+        price: product.price,
+        image: product.image,
+        category: product.category,
+        barcode: product.barcode,
+        stock: product.stock,
+        unit: product.unit,
+        status: product.status,
+        description: product.description,
+        nutriscoreGrade: product.nutriscoreGrade,
+        nutriscoreScore: product.nutriscoreScore,
+        protein: product.protein,
+        nutritionalValue: product.nutritionalValue,
+        likesCount: product.likesCount || 0,
+        isBestSeller: product.isBestSeller,
+        salesCount: product.salesCount
+      };
 
-    res.json({
-      products: formattedProducts,
+      // Add isLiked status if user is authenticated
+      if (userId) {
+        productObj.isLiked = product.likes && product.likes.some(
+          likeId => likeId.toString() === userId
+        );
+      } else {
+        productObj.isLiked = false;
+      }
+
+      return productObj;
+    });
+
+    // Always return products array, even if empty
+    const response = {
+      products: formattedProducts || [],
       pagination: {
         page: parseInt(page),
         pageSize,
-        total,
-        pages: Math.ceil(total / pageSize)
+        total: total || 0,
+        pages: Math.ceil((total || 0) / pageSize) || 0
       }
-    });
+    };
+    
+    console.log(`✅ Sending response: ${formattedProducts.length} products, total in DB: ${totalInDB}`);
+    
+    res.json(response);
   } catch (error) {
-    console.error('Error fetching products:', error);
+    console.error('❌ Error fetching products:', error);
     res.status(500).json({
       message: 'Error fetching products',
-      error: error.message
+      error: error.message,
+      products: [] // Always return empty array on error
     });
   }
 };
@@ -133,28 +188,44 @@ export const searchProducts = async (req, res) => {
         { barcode: { $regex: query, $options: 'i' } },
         { category: { $regex: query, $options: 'i' } }
       ],
-      stock: { $gt: 0 },
       status: 'active'
     })
     .limit(50)
     .sort({ isBestSeller: -1, salesCount: -1 });
 
-    const formattedProducts = products.map(product => ({
-      id: product._id.toString(),
-      productId: product.productId,
-      name: product.name,
-      brand: product.brand,
-      price: product.price,
-      image: product.image,
-      category: product.category,
-      barcode: product.barcode,
-      stock: product.stock,
-      unit: product.unit,
-      status: product.status,
-      nutriscoreGrade: product.nutriscoreGrade,
-      protein: product.protein,
-      isBestSeller: product.isBestSeller
-    }));
+    // Get user ID if authenticated
+    const userId = req.user?.id || null;
+
+    const formattedProducts = products.map(product => {
+      const productObj = {
+        id: product._id.toString(),
+        productId: product.productId,
+        name: product.name,
+        brand: product.brand,
+        price: product.price,
+        image: product.image,
+        category: product.category,
+        barcode: product.barcode,
+        stock: product.stock,
+        unit: product.unit,
+        status: product.status,
+        nutriscoreGrade: product.nutriscoreGrade,
+        protein: product.protein,
+        isBestSeller: product.isBestSeller,
+        likesCount: product.likesCount || 0
+      };
+
+      // Add isLiked status if user is authenticated
+      if (userId) {
+        productObj.isLiked = product.likes && product.likes.some(
+          likeId => likeId.toString() === userId
+        );
+      } else {
+        productObj.isLiked = false;
+      }
+
+      return productObj;
+    });
 
     res.json({ products: formattedProducts });
   } catch (error) {
@@ -221,19 +292,39 @@ export const toggleLike = async (req, res) => {
       });
     }
 
-    const isLiked = product.likes.includes(userId);
+    const isLiked = product.likes.some(likeId => likeId.toString() === userId);
     
+    // Update product likes
     if (isLiked) {
       // Unlike
       product.likes = product.likes.filter(likeId => likeId.toString() !== userId);
       product.likesCount = Math.max(0, product.likesCount - 1);
     } else {
       // Like
-      product.likes.push(userId);
+      if (!product.likes.some(likeId => likeId.toString() === userId)) {
+        product.likes.push(userId);
+      }
       product.likesCount = product.likesCount + 1;
     }
 
     await product.save();
+
+    // Update user's likedProducts array
+    const user = await User.findById(userId);
+    if (user) {
+      if (isLiked) {
+        // Remove from user's likedProducts
+        user.likedProducts = user.likedProducts.filter(
+          productId => productId.toString() !== id
+        );
+      } else {
+        // Add to user's likedProducts
+        if (!user.likedProducts.some(productId => productId.toString() === id)) {
+          user.likedProducts.push(id);
+        }
+      }
+      await user.save();
+    }
 
     res.json({
       message: isLiked ? 'Product unliked' : 'Product liked',
@@ -267,6 +358,197 @@ export const getProductByBarcode = async (req, res) => {
     console.error('Error fetching product by barcode:', error);
     res.status(500).json({
       message: 'Error fetching product',
+      error: error.message
+    });
+  }
+};
+
+// Get liked products for current user
+export const getLikedProducts = async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        message: 'Authentication required'
+      });
+    }
+
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found'
+      });
+    }
+
+    // Get all liked product IDs
+    const likedProductIds = user.likedProducts || [];
+    
+    if (likedProductIds.length === 0) {
+      return res.json({
+        products: [],
+        count: 0
+      });
+    }
+
+    // Fetch products, filtering out any that might not exist anymore
+    const products = await Product.find({
+      _id: { $in: likedProductIds }
+    });
+
+    // Format products - filter out null/undefined products
+    const formattedProducts = products
+      .filter(product => product !== null && product !== undefined)
+      .map(product => ({
+        id: product._id.toString(),
+        productId: product.productId,
+        name: product.name,
+        brand: product.brand,
+        price: product.price,
+        image: product.image,
+        category: product.category,
+        barcode: product.barcode,
+        stock: product.stock,
+        unit: product.unit,
+        status: product.status,
+        description: product.description,
+        nutriscoreGrade: product.nutriscoreGrade,
+        nutriscoreScore: product.nutriscoreScore,
+        protein: product.protein,
+        nutritionalValue: product.nutritionalValue,
+        likesCount: product.likesCount || 0,
+        isBestSeller: product.isBestSeller,
+        salesCount: product.salesCount,
+        isLiked: true // All products in this list are liked
+      }));
+
+    // Clean up any invalid product IDs from user's likedProducts
+    if (products.length !== likedProductIds.length) {
+      const validProductIds = products.map(p => p._id);
+      user.likedProducts = validProductIds;
+      await user.save();
+    }
+
+    console.log(`✅ Returning ${formattedProducts.length} liked products for user ${userId}`);
+
+    res.json({
+      products: formattedProducts,
+      count: formattedProducts.length
+    });
+  } catch (error) {
+    console.error('❌ Error fetching liked products:', error);
+    res.status(500).json({
+      message: 'Error fetching liked products',
+      error: error.message,
+      products: [] // Always return empty array on error
+    });
+  }
+};
+
+// Generate protein plan
+export const generateProteinPlan = async (req, res) => {
+  try {
+    const { age, weight, height, activityLevel, goal } = req.body;
+
+    if (!age || !weight || !height) {
+      return res.status(400).json({
+        message: 'Age, weight, and height are required'
+      });
+    }
+
+    // Protein multipliers based on activity level
+    const activityMultipliers = {
+      sedentary: 1.2,
+      light: 1.4,
+      moderate: 1.6,
+      active: 1.8,
+      very_active: 2.0
+    };
+
+    // Goal adjustments
+    const goalAdjustments = {
+      maintenance: 0,
+      muscle_gain: 0.3,
+      weight_loss: 0.2
+    };
+
+    const baseMultiplier = activityMultipliers[activityLevel] || 1.6;
+    const goalAdjustment = goalAdjustments[goal] || 0;
+    const proteinMultiplier = baseMultiplier + goalAdjustment;
+
+    // Calculate daily protein need
+    const dailyProteinNeed = parseFloat(weight) * proteinMultiplier;
+
+    // Distribute across meals: Breakfast (25%), Lunch (35%), Dinner (40%)
+    const breakfastTarget = dailyProteinNeed * 0.25;
+    const lunchTarget = dailyProteinNeed * 0.35;
+    const dinnerTarget = dailyProteinNeed * 0.40;
+
+    // Find products for each meal
+    // For breakfast: look for products with protein content around breakfast target
+    // For lunch and dinner: look for products with higher protein content
+    const findProductsForMeal = async (targetProtein, mealType) => {
+      // Search for products with protein content within a reasonable range
+      const minProtein = Math.max(5, targetProtein * 0.3); // At least 30% of target
+      const maxProtein = targetProtein * 2; // Up to 2x target
+
+      const products = await Product.find({
+        protein: { $gte: minProtein, $lte: maxProtein },
+        stock: { $gt: 0 },
+        status: 'active'
+      })
+      .sort({ protein: -1, isBestSeller: -1 })
+      .limit(6); // Get top 6 products
+
+      return products.map(product => ({
+        id: product._id.toString(),
+        productId: product.productId,
+        name: product.name,
+        brand: product.brand,
+        price: product.price,
+        image: product.image,
+        category: product.category,
+        barcode: product.barcode,
+        stock: product.stock,
+        unit: product.unit,
+        status: product.status,
+        nutriscoreGrade: product.nutriscoreGrade,
+        protein: product.protein,
+        nutritionalValue: product.nutritionalValue,
+        isBestSeller: product.isBestSeller
+      }));
+    };
+
+    const [breakfastProducts, lunchProducts, dinnerProducts] = await Promise.all([
+      findProductsForMeal(breakfastTarget, 'breakfast'),
+      findProductsForMeal(lunchTarget, 'lunch'),
+      findProductsForMeal(dinnerTarget, 'dinner')
+    ]);
+
+    res.json({
+      dailyProteinNeed,
+      breakfast: {
+        proteinTarget: breakfastTarget,
+        products: breakfastProducts
+      },
+      lunch: {
+        proteinTarget: lunchTarget,
+        products: lunchProducts
+      },
+      dinner: {
+        proteinTarget: dinnerTarget,
+        products: dinnerProducts
+      },
+      recommendations: {
+        activityLevel,
+        goal,
+        proteinMultiplier
+      }
+    });
+  } catch (error) {
+    console.error('Error generating protein plan:', error);
+    res.status(500).json({
+      message: 'Error generating protein plan',
       error: error.message
     });
   }

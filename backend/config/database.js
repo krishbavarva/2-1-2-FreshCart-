@@ -33,17 +33,21 @@ const connectDB = async (retryCount = 0) => {
     return;
   }
 
+  // Re-read MONGODB_URI from environment to ensure we have the latest value
+  const currentMongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/grocery';
+
   try {
     connectionAttempts++;
     console.log(`\n🔍 Attempting to connect to MongoDB... (Attempt ${connectionAttempts})`);
+    console.log(`   URI: ${currentMongoUri.includes('@') ? currentMongoUri.split('@')[0] + '@...' : currentMongoUri}`);
     
-    if (MONGODB_URI.includes('@')) {
+    if (currentMongoUri.includes('@')) {
       console.log('   Type: MongoDB Atlas');
     } else {
       console.log('   Type: Local MongoDB');
     }
 
-    await mongoose.connect(MONGODB_URI, connectionOptions);
+    await mongoose.connect(currentMongoUri, connectionOptions);
     
     isConnected = true;
     connectionAttempts = 0; // Reset on successful connection
@@ -97,12 +101,15 @@ const setupConnectionHandlers = () => {
   // Connection disconnected
   mongoose.connection.on('disconnected', () => {
     isConnected = false;
+    const currentUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/grocery';
     console.warn('⚠️  MongoDB disconnected. Attempting to reconnect...');
+    console.log(`   Target: ${currentUri.includes('@') ? 'MongoDB Atlas' : 'Local MongoDB'}`);
     
     // Automatically reconnect after a delay
     setTimeout(() => {
       if (!isConnected) {
         console.log('🔄 Attempting to reconnect to MongoDB...');
+        // Use current URI from environment
         connectDB(0);
       }
     }, RETRY_DELAY);

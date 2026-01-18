@@ -9,12 +9,16 @@
     "test": "mocha",
     "create-admin": "node scripts/createAdmin.js",
     "create-users": "node scripts/createUsers.js",
-    "sync-products": "node scripts/syncProducts.js"
+    "sync-products": "node scripts/syncProducts.js",
+    "sync-products-all": "node scripts/syncProducts.js 200 100",
+    "sync-products-large": "node scripts/syncProducts.js 500 100"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@stripe/react-stripe-js": "^5.4.1",
+    "@stripe/stripe-js": "^8.6.1",
     "axios": "^1.13.2",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
@@ -25,6 +29,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.0.1",
+    "stripe": "^20.2.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   },

@@ -80,24 +80,50 @@ const orderSchema = new mongoose.Schema({
   },
   paymentStatus: {
     type: String,
-    enum: ['pending', 'paid', 'failed'],
+    enum: ['pending', 'paid', 'failed', 'refunded'],
     default: 'pending'
+  },
+  paymentIntentId: {
+    type: String,
+    default: ''
+  },
+  stripePaymentId: {
+    type: String,
+    default: ''
   }
 }, {
   timestamps: true
 });
 
-// Generate order number before saving
-orderSchema.pre('save', async function(next) {
-  if (!this.orderNumber) {
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 1000);
-    this.orderNumber = `ORD-${timestamp}-${random}`;
-  }
-  next();
-});
+// IMPORTANT: NO PRE-SAVE HOOKS!
+// Pre-save hooks can cause "next is not a function" errors
+// orderNumber is generated in controllers before Order.create()
+// Controllers now generate orderNumber: ORD-{timestamp}-{random}
 
-const Order = mongoose.models.Order || mongoose.model('Order', orderSchema);
+// Aggressively clear cached model to ensure fresh schema (important for removing hooks)
+// This prevents using old cached model with pre-save hooks
+if (mongoose.models.Order) {
+  delete mongoose.models.Order;
+}
+if (mongoose.modelSchemas && mongoose.modelSchemas.Order) {
+  delete mongoose.modelSchemas.Order;
+}
+// Also try alternative cache locations
+if (mongoose.modelSchemas && mongoose.modelSchemas.OrderSchema) {
+  delete mongoose.modelSchemas.OrderSchema;
+}
+
+// Verify no hooks exist on schema before creating model
+if (orderSchema.$preHooks || orderSchema._hooks) {
+  console.warn('⚠️ Warning: Order schema has hooks! This may cause issues.');
+}
+
+const Order = mongoose.model('Order', orderSchema);
+
+// Verify the created model has no pre-save hooks
+if (Order.schema && Order.schema.$preHooks) {
+  console.warn('⚠️ Warning: Order model still has pre-save hooks after creation!');
+}
 
 export default Order;
 

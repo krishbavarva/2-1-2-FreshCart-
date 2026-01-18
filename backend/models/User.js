@@ -54,7 +54,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['customer', 'employee', 'manager', 'admin'],
     default: 'customer'
-  }
+  },
+  likedProducts: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product'
+  }]
 }, {
   timestamps: true
 });

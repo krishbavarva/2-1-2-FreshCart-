@@ -109,7 +109,12 @@ router.delete('/clear', clearCart);
  *       200:
  *         description: Cart item updated
  */
-router.put('/item/:itemId', updateCartItem);
+// PUT /api/cart/item/:itemId - Update cart item quantity
+router.put('/item/:itemId', (req, res, next) => {
+  console.log('🔍 PUT /api/cart/item/:itemId route matched');
+  console.log('   ItemId:', req.params.itemId);
+  next();
+}, updateCartItem);
 
 /**
  * @swagger

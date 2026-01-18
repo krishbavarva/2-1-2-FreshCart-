@@ -1,8 +1,13 @@
+// ⚠️ CRITICAL: Load environment variables FIRST, before any other imports
+// This ensures .env file is loaded before modules that need environment variables
+import dotenv from 'dotenv';
+dotenv.config();
+
+// Now import everything else after .env is loaded
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import specs from './config/swagger.js';
 import { connectDB, isDBConnected, getConnectionStatus, mongoose } from './config/database.js';
@@ -11,13 +16,24 @@ import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import cartRoutes from './routes/cartRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import customerRoutes from './routes/customerRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
 import managerRoutes from './routes/managerRoutes.js';
 
-// Load environment variables
-dotenv.config();
+// Debug: Log Stripe key status after loading .env
+console.log('\n📋 Environment Variables Status:');
+console.log('   STRIPE_SECRET_KEY loaded:', process.env.STRIPE_SECRET_KEY ? '✅ YES' : '❌ NO');
+if (process.env.STRIPE_SECRET_KEY) {
+  const key = process.env.STRIPE_SECRET_KEY;
+  console.log('   Key preview:', key.substring(0, 10) + '...' + key.substring(key.length - 4));
+  console.log('   Key length:', key.length);
+} else {
+  console.log('   ⚠️ STRIPE_SECRET_KEY not found in process.env');
+  console.log('   Make sure .env file exists in backend/ directory');
+  console.log('   Make sure .env file contains: STRIPE_SECRET_KEY=sk_test_...');
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -131,10 +147,14 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/payment', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/customer', customerRoutes);
 app.use('/api/employee', employeeRoutes);
 app.use('/api/manager', managerRoutes);
+
+// Log payment routes registration
+console.log('✅ Payment routes registered at /api/payment');
 
 // Verify routes are registered
 const registeredRoutes = [
@@ -142,6 +162,7 @@ const registeredRoutes = [
   { path: '/api/products', name: 'Products' },
   { path: '/api/cart', name: 'Shopping Cart' },
   { path: '/api/orders', name: 'Order Management' },
+  { path: '/api/payment', name: 'Payment System' },
   { path: '/api/admin', name: 'Admin Panel' },
   { path: '/api/customer', name: 'Customer Dashboard' },
   { path: '/api/employee', name: 'Employee Dashboard' },
@@ -155,21 +176,44 @@ registeredRoutes.forEach(route => {
 
 // Verify route modules are loaded
 try {
-  if (!authRoutes || !productRoutes || !cartRoutes || !orderRoutes) {
+  if (!authRoutes || !productRoutes || !cartRoutes || !orderRoutes || !paymentRoutes) {
     console.error('\n❌ ERROR: Some route modules failed to load!');
     console.error('   Please check route imports in app.js');
+    if (!paymentRoutes) {
+      console.error('   ⚠️ Payment routes module not loaded!');
+    }
   } else {
-    console.log('\n✅ All route modules loaded successfully');
+    console.log('\n✅ All route modules loaded successfully (including payment routes)');
   }
 } catch (error) {
   console.error('\n❌ ERROR verifying routes:', error.message);
 }
 
+// Debug: Log all incoming requests (especially cart and API routes)
+app.use((req, res, next) => {
+  // Log all API requests in development
+  if (req.path.startsWith('/api/')) {
+    console.log(`🔍 [${req.method}] ${req.originalUrl}`);
+  }
+  // Log cart requests specifically
+  if (req.path.includes('cart')) {
+    console.log(`🛒 Cart Request: ${req.method} ${req.originalUrl}`);
+    console.log(`   Path: ${req.path}`);
+    console.log(`   Base URL: ${req.baseUrl}`);
+  }
+  next();
+});
+
 // 404 handler
 app.use((req, res) => {
+  console.log(`❌ 404 - Route not found: ${req.method} ${req.originalUrl}`);
+  console.log(`   Expected routes include:`);
+  console.log(`   - POST /api/products/protein-plan`);
+  console.log(`   - POST /api/payment/create-intent`);
+  console.log(`   - POST /api/payment/confirm`);
   res.status(404).json({ 
     error: 'Not Found',
-    message: `Route ${req.method} ${req.path} not found`
+    message: `Route ${req.method} ${req.path} not found. Make sure the backend server has been restarted after adding new routes.`
   });
 });
 

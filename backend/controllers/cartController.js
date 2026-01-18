@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Cart from '../models/Cart.js';
 import Product from '../models/Product.js';
 import { isDBConnected } from '../config/database.js';
@@ -119,16 +120,21 @@ export const addToCart = async (req, res) => {
     console.log('🛒 Adding to cart for user:', userId);
 
     const { productId, name, brand, price, image, quantity = 1, category } = req.body;
-    console.log('📦 Product data:', { productId, name, price, quantity });
+    console.log('📦 Product data received:', { productId, name, price, quantity, body: req.body });
 
     if (!productId || !name || price === undefined) {
       return res.status(400).json({
-        message: 'Product ID, name, and price are required'
+        message: 'Product ID, name, and price are required',
+        received: { productId, name, price }
       });
     }
 
     // Check product stock before adding to cart
-    const product = await Product.findOne({ productId: productId });
+    // Try finding by MongoDB _id first, then by productId
+    let product = await Product.findById(productId);
+    if (!product) {
+      product = await Product.findOne({ productId: productId });
+    }
     
     if (!product) {
       return res.status(404).json({
@@ -259,6 +265,13 @@ export const addToCart = async (req, res) => {
 // Update cart item quantity
 export const updateCartItem = async (req, res) => {
   try {
+    console.log('🛒 [UPDATE CART ITEM] Request received:', {
+      method: req.method,
+      path: req.path,
+      itemId: req.params.itemId,
+      quantity: req.body.quantity
+    });
+
     if (!isDBConnected()) {
       return res.status(503).json({
         message: 'Database not connected',
@@ -277,9 +290,17 @@ export const updateCartItem = async (req, res) => {
     const { itemId } = req.params;
     const { quantity } = req.body;
 
+    console.log('📦 Update cart item params:', { userId, itemId, quantity });
+
     if (!quantity || quantity < 1) {
       return res.status(400).json({
         message: 'Quantity must be at least 1'
+      });
+    }
+
+    if (!itemId) {
+      return res.status(400).json({
+        message: 'Item ID is required'
       });
     }
 
@@ -287,6 +308,7 @@ export const updateCartItem = async (req, res) => {
     const cart = await Cart.findOne({ user: userId });
 
     if (!cart) {
+      console.log('❌ Cart not found for user:', userId);
       return res.status(404).json({
         message: 'Cart not found'
       });
@@ -294,16 +316,62 @@ export const updateCartItem = async (req, res) => {
 
     const item = cart.items.id(itemId);
     if (!item) {
+      console.log('❌ Item not found in cart:', itemId);
+      console.log('Available items:', cart.items.map(i => i._id.toString()));
       return res.status(404).json({
         message: 'Item not found in cart'
       });
     }
 
     // Check product stock before updating quantity
-    const product = await Product.findOne({ productId: item.productId });
+    // item.productId can be either MongoDB _id or productId field (barcode)
+    // Try multiple lookup strategies
+    let product = null;
+    const itemProductId = item.productId;
+    
+    console.log('🔍 Looking up product for cart item:', {
+      itemProductId,
+      itemProductIdType: typeof itemProductId,
+      itemId: item._id.toString()
+    });
+    
+    // Strategy 1: Try as MongoDB _id (most common case)
+    try {
+      if (mongoose.Types.ObjectId.isValid(itemProductId)) {
+        product = await Product.findById(itemProductId);
+        if (product) {
+          console.log('✅ Found product by MongoDB _id:', product._id.toString());
+        }
+      }
+    } catch (idError) {
+      console.log('⚠️  MongoDB _id lookup failed:', idError.message);
+    }
+    
+    // Strategy 2: Try as productId field (barcode from Open Food Facts)
     if (!product) {
+      product = await Product.findOne({ productId: itemProductId });
+      if (product) {
+        console.log('✅ Found product by productId field:', product.productId);
+      }
+    }
+    
+    // Strategy 3: Try by name (last resort, but shouldn't be needed)
+    if (!product && item.name) {
+      product = await Product.findOne({ name: { $regex: item.name, $options: 'i' } });
+      if (product) {
+        console.log('✅ Found product by name:', product.name);
+      }
+    }
+    
+    if (!product) {
+      console.log('❌ Product not found with any strategy:', {
+        itemProductId,
+        itemName: item.name,
+        availableProductsCount: await Product.countDocuments({})
+      });
       return res.status(404).json({
-        message: 'Product not found'
+        message: `Product not found: ${item.name || itemProductId}. The product may have been removed from inventory.`,
+        itemProductId
       });
     }
 

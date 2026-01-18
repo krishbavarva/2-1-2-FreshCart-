@@ -24,15 +24,30 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    // Validate shipping address
+    if (!shippingAddress || !shippingAddress.firstName || !shippingAddress.lastName || 
+        !shippingAddress.address || !shippingAddress.city || !shippingAddress.zipCode || 
+        !shippingAddress.country) {
+      return res.status(400).json({
+        message: 'Complete shipping address is required'
+      });
+    }
+
     // Calculate totals
-    const subtotal = cart.totalPrice;
-    const tax = subtotal * 0.1; // 10% tax
-    const shipping = subtotal > 50 ? 0 : 5.99; // Free shipping over $50
+    const subtotal = cart.totalPrice || 0;
+    const tax = subtotal * 0.1; // 10% tax (French VAT would be ~20%, but using 10% for now)
+    const shipping = subtotal > 50 ? 0 : 5.99; // Free shipping over €50
     const total = subtotal + tax + shipping;
+
+    // Generate order number (required field)
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000);
+    const orderNumber = `ORD-${timestamp}-${random}`;
 
     // Create order
     const order = await Order.create({
       user: userId,
+      orderNumber: orderNumber,
       items: cart.items.map(item => ({
         productId: item.productId,
         name: item.name,
@@ -46,9 +61,9 @@ export const createOrder = async (req, res) => {
       tax,
       shipping,
       total,
-      shippingAddress: shippingAddress || {},
+      shippingAddress: shippingAddress,
       paymentMethod,
-      paymentStatus: 'paid', // In production, integrate with payment gateway
+      paymentStatus: 'pending', // Will be updated after payment confirmation
       status: 'pending'
     });
 
