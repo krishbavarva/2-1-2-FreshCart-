@@ -105,41 +105,13 @@ sync:github:
   image: alpine/git:latest
   before_script:
     - apk add --no-cache openssh-client curl
-    - |
-      if [ -z "$GITLAB_USER_EMAIL" ]; then
-        git config --global user.email "gitlab-ci@example.com"
-      else
-        git config --global user.email "$GITLAB_USER_EMAIL"
-      fi
-    - |
-      if [ -z "$GITLAB_USER_NAME" ]; then
-        git config --global user.name "GitLab CI"
-      else
-        git config --global user.name "$GITLAB_USER_NAME"
-      fi
+    - '[ -z "$GITLAB_USER_EMAIL" ] && git config --global user.email "gitlab-ci@example.com" || git config --global user.email "$GITLAB_USER_EMAIL"'
+    - '[ -z "$GITLAB_USER_NAME" ] && git config --global user.name "GitLab CI" || git config --global user.name "$GITLAB_USER_NAME"'
   script:
     - echo "Syncing to GitHub"
-    - |
-      if [ -z "$GITHUB_REPO_URL" ]; then
-        echo "GITHUB_REPO_URL not set"
-        exit 0
-      fi
-    - |
-      if [ -n "$GITHUB_TOKEN" ]; then
-        GITHUB_URL_WITH_TOKEN=$(echo $GITHUB_REPO_URL | sed "s|https://|https://${GITHUB_TOKEN}@|")
-        git remote add github $GITHUB_URL_WITH_TOKEN 2>/dev/null || git remote set-url github $GITHUB_URL_WITH_TOKEN
-        git push github ${CI_COMMIT_REF_NAME} || true
-      fi
-    - |
-      if [ -n "$GITHUB_SSH_PRIVATE_KEY" ]; then
-        mkdir -p ~/.ssh
-        echo "$GITHUB_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
-        GITHUB_SSH_URL=$(echo $GITHUB_REPO_URL | sed "s|https://github.com/|git@github.com:|" | sed "s|\.git$||").git
-        git remote add github $GITHUB_SSH_URL 2>/dev/null || git remote set-url github $GITHUB_SSH_URL
-        git push github ${CI_COMMIT_REF_NAME} || true
-      fi
+    - '[ -z "$GITHUB_REPO_URL" ] && echo "GITHUB_REPO_URL not set" && exit 0 || true'
+    - '[ -n "$GITHUB_TOKEN" ] && GITHUB_URL_WITH_TOKEN=$(echo $GITHUB_REPO_URL | sed "s|https://|https://${GITHUB_TOKEN}@|") && git remote add github $GITHUB_URL_WITH_TOKEN 2>/dev/null || git remote set-url github $GITHUB_URL_WITH_TOKEN && git push github ${CI_COMMIT_REF_NAME} || true'
+    - '[ -n "$GITHUB_SSH_PRIVATE_KEY" ] && mkdir -p ~/.ssh && echo "$GITHUB_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa && ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null && GITHUB_SSH_URL=$(echo $GITHUB_REPO_URL | sed "s|https://github.com/|git@github.com:|" | sed "s|\.git$||").git && git remote add github $GITHUB_SSH_URL 2>/dev/null || git remote set-url github $GITHUB_SSH_URL && git push github ${CI_COMMIT_REF_NAME} || true'
   only:
     - main
     - master
