@@ -14,3 +14,4 @@ git push github main || git push github master
 echo "✅ Done! Code pushed to both GitLab and GitHub"
 echo "🔄 GitLab CI will auto-sync to GitHub (if configured)"
 
+

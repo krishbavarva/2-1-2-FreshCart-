@@ -1,9 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { createPaymentIntent, confirmPayment } from '../services/paymentService';
+import CheckoutForm from '../components/payment/CheckoutForm';
+import { STRIPE_PUBLISHABLE_KEY } from '../config/stripe';
 import toast from 'react-hot-toast';
+
+// Initialize Stripe
+console.log('🔑 Loading Stripe with key:', STRIPE_PUBLISHABLE_KEY.substring(0, 20) + '...');
+const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY)
+  .then((stripe) => {
+    console.log('✅ Stripe loaded successfully');
+    return stripe;
+  })
+  .catch((error) => {
+    console.error('❌ Failed to load Stripe:', error);
+    console.error('Key used:', STRIPE_PUBLISHABLE_KEY.substring(0, 30) + '...');
+    console.error('Key length:', STRIPE_PUBLISHABLE_KEY.length);
+    return null;
+  });
 
 const Cart = () => {
   const { cart, updateQuantity, removeFromCart, clearCart, loading } = useCart();
@@ -13,6 +31,11 @@ const Cart = () => {
   const [showCheckout, setShowCheckout] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('card');
+  const [clientSecret, setClientSecret] = useState(null);
+  const [paymentIntentId, setPaymentIntentId] = useState(null);
+  const [stripeLoaded, setStripeLoaded] = useState(false);
+  const [deliveryInfo, setDeliveryInfo] = useState(null);
+  const [calculatingDistance, setCalculatingDistance] = useState(false);
   const [shippingAddress, setShippingAddress] = useState({
     firstName: currentUser?.user?.firstName || '',
     lastName: currentUser?.user?.lastName || '',
@@ -58,27 +81,86 @@ const Cart = () => {
 
   const subtotal = cart.totalPrice || 0;
   const tax = subtotal * 0.1;
-  const shipping = subtotal > 50 ? 0 : 5.99;
-  const total = subtotal + tax + shipping;
+  // Delivery cost is calculated based on distance via Google Maps
+  // If deliveryInfo is available, use it; otherwise show placeholder
+  const deliveryCost = deliveryInfo?.deliveryFee || 0;
+  const total = subtotal + tax + deliveryCost;
+
+  // Check if Stripe is loaded
+  useEffect(() => {
+    stripePromise.then((stripe) => {
+      if (stripe) {
+        console.log('✅ Stripe instance ready');
+        setStripeLoaded(true);
+      } else {
+        console.error('❌ Stripe failed to load');
+        setStripeLoaded(false);
+      }
+    });
+  }, []);
+
+
+  // Auto-calculate distance when address is complete
+  useEffect(() => {
+    if (showCheckout && !deliveryInfo && !calculatingDistance && !clientSecret) {
+      const { address, city, zipCode, country, firstName, lastName } = shippingAddress;
+      if (address && city && zipCode && country && firstName && lastName) {
+        // Debounce: wait 1 second after last input change
+        const timer = setTimeout(async () => {
+          try {
+            setCalculatingDistance(true);
+            console.log('🔄 Auto-calculating distance for address...');
+            console.log('   Address:', `${address}, ${city}, ${zipCode}, ${country}`);
+            const paymentData = await createPaymentIntent(shippingAddress);
+            
+            if (paymentData.deliveryInfo) {
+              setDeliveryInfo(paymentData.deliveryInfo);
+              setClientSecret(paymentData.clientSecret);
+              setPaymentIntentId(paymentData.paymentIntentId);
+              console.log('✅ Distance calculated:', paymentData.deliveryInfo);
+            } else {
+              console.warn('⚠️ No delivery info returned from payment intent');
+            }
+          } catch (error) {
+            console.error('❌ Error calculating distance:', error);
+            console.error('   Error details:', {
+              message: error.message,
+              response: error.response?.data,
+              status: error.response?.status
+            });
+            // Show user-friendly error for calculation failures
+            if (error.response?.data?.message) {
+              toast.error(error.response.data.message);
+            }
+          } finally {
+            setCalculatingDistance(false);
+          }
+        }, 1000); // 1 second debounce
+
+        return () => clearTimeout(timer);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCheckout, shippingAddress.address, shippingAddress.city, shippingAddress.zipCode, shippingAddress.country, shippingAddress.firstName, shippingAddress.lastName, deliveryInfo, calculatingDistance, clientSecret]);
 
   const handleCheckout = async () => {
     if (!showCheckout) {
+      // Step 1: Show checkout form with address fields
       setShowCheckout(true);
       return;
     }
 
-    // Validate shipping address
+    // Step 2: Validate shipping address before creating payment intent
     if (!shippingAddress.firstName || !shippingAddress.lastName || !shippingAddress.address || 
         !shippingAddress.city || !shippingAddress.zipCode || !shippingAddress.country) {
-      toast.error('Please fill in all shipping address fields');
+      toast.error('Please fill in all delivery address fields');
       return;
     }
 
+    // Step 3: Create payment intent
     try {
       setCheckoutLoading(true);
-      setPaymentProcessing(true);
-
-      // Step 1: Create payment intent
+      setCalculatingDistance(true);
       console.log('🔄 Creating payment intent...');
       const paymentData = await createPaymentIntent(shippingAddress);
       
@@ -87,25 +169,34 @@ const Cart = () => {
       }
 
       console.log('✅ Payment intent created:', paymentData.paymentIntentId);
+      setClientSecret(paymentData.clientSecret);
+      setPaymentIntentId(paymentData.paymentIntentId);
+      
+      // Store delivery information
+      if (paymentData.deliveryInfo) {
+        setDeliveryInfo(paymentData.deliveryInfo);
+      }
+    } catch (error) {
+      console.error('❌ Error creating payment intent:', error);
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Failed to initialize payment. Please try again.';
+      toast.error(errorMessage);
+      setDeliveryInfo(null);
+    } finally {
+      setCheckoutLoading(false);
+      setCalculatingDistance(false);
+    }
+  };
 
-      // Step 2: For testing, simulate payment success
-      // In production, use Stripe.js Elements to collect card details
-      // For now, we'll use a test mode that confirms the payment automatically
-      
-      // Note: In a real implementation, you would use Stripe.js to collect card details
-      // and confirm the payment client-side. For testing without card details,
-      // we can use Stripe test mode with test card numbers.
-      
-      // For now, confirm payment with the payment intent ID
-      // This assumes payment was processed (in test mode you can use test cards)
-      console.log('🔄 Confirming payment...');
-      
-      // Wait a moment to simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 1000));
+  const handlePaymentSuccess = async (paymentIntent) => {
+    try {
+      setPaymentProcessing(true);
+      console.log('🔄 Payment succeeded, creating order...');
       
       // Confirm payment and create order
       const orderData = await confirmPayment(
-        paymentData.paymentIntentId,
+        paymentIntent.id || paymentIntentId,
         shippingAddress,
         paymentMethod
       );
@@ -116,15 +207,19 @@ const Cart = () => {
       clearCart();
       navigate('/orders');
     } catch (error) {
-      console.error('❌ Checkout error:', error);
+      console.error('❌ Error creating order:', error);
       const errorMessage = error.response?.data?.message || 
                           error.message || 
-                          'Failed to place order. Please try again.';
+                          'Payment succeeded but failed to create order. Please contact support.';
       toast.error(errorMessage);
     } finally {
-      setCheckoutLoading(false);
       setPaymentProcessing(false);
     }
+  };
+
+  const handlePaymentError = (error) => {
+    console.error('❌ Payment error:', error);
+    toast.error(error.message || 'Payment failed. Please try again.');
   };
 
   return (
@@ -235,12 +330,18 @@ const Cart = () => {
                       <span>€{tax.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-gray-700">
-                      <span>Shipping</span>
-                      <span>{shipping === 0 ? <span className="font-semibold text-green-600">FREE</span> : `€${shipping.toFixed(2)}`}</span>
+                      <span>Delivery Cost</span>
+                      <span>{deliveryInfo ? `€${deliveryInfo.deliveryFee.toFixed(2)}` : <span className="text-gray-400">Calculating...</span>}</span>
                     </div>
-                    {subtotal < 50 && (
-                      <p className="text-sm text-blue-600">
-                        Add €{(50 - subtotal).toFixed(2)} more for free shipping!
+                    {deliveryInfo && (
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <p>📍 Distance: {deliveryInfo.distance} km (calculated via OpenRouteService)</p>
+                        <p>⏱️ Est. delivery: {deliveryInfo.estimatedDeliveryTime} min</p>
+                      </div>
+                    )}
+                    {!deliveryInfo && showCheckout && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        💡 Delivery cost will be calculated based on your address location
                       </p>
                     )}
                     <div className="pt-3 mt-3 border-t border-gray-300">
@@ -261,7 +362,8 @@ const Cart = () => {
               ) : (
                 <>
                   <div className="space-y-4 mb-6">
-                    <h3 className="font-semibold text-gray-900">Shipping Address</h3>
+                    <h3 className="font-semibold text-gray-900">Delivery Address</h3>
+                    <p className="text-xs text-gray-500 mb-3">Enter your address to calculate delivery cost based on distance</p>
                     <div className="grid grid-cols-2 gap-4">
                       <input
                         type="text"
@@ -323,34 +425,105 @@ const Cart = () => {
                     />
                   </div>
 
-                  {/* Payment Method Selection */}
-                  <div className="space-y-3 mb-4">
-                    <h3 className="font-semibold text-gray-900">Payment Method</h3>
-                    <div className="space-y-2">
-                      <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input
-                          type="radio"
-                          name="paymentMethod"
-                          value="card"
-                          checked={paymentMethod === 'card'}
-                          onChange={(e) => setPaymentMethod(e.target.value)}
-                          className="mr-3"
-                        />
-                        <span className="text-gray-900">Credit/Debit Card</span>
-                      </label>
+                  {/* Delivery Information */}
+                  {deliveryInfo && (
+                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <h4 className="font-semibold text-blue-900 mb-2">Delivery Information</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-700">Distance:</span>
+                          <span className="font-medium text-blue-900">{deliveryInfo.distance} km</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-700">Delivery Fee:</span>
+                          <span className="font-medium text-blue-900">€{deliveryInfo.deliveryFee.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-700">Estimated Time:</span>
+                          <span className="font-medium text-blue-900">{deliveryInfo.estimatedDeliveryTime} minutes</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-2">
-                      <p className="text-xs text-blue-800">
-                        <strong>⚠️ Test Mode:</strong> Currently in test mode - card details are not collected.
-                      </p>
-                      <p className="text-xs text-blue-700 mt-1">
-                        In production, you'll enter card details here before payment.
-                      </p>
-                      <p className="text-xs text-blue-600 mt-1 font-mono">
-                        Test Card: 4242 4242 4242 4242 (Any future date, any CVC)
+                  )}
+
+                  {calculatingDistance && (
+                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800 flex items-center">
+                        <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Calculating distance...
                       </p>
                     </div>
-                  </div>
+                  )}
+
+                  {/* Payment Form */}
+                  {clientSecret ? (
+                    <div className="space-y-4 mb-6">
+                      <h3 className="font-semibold text-gray-900">Payment Details</h3>
+                      {!stripeLoaded ? (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <p className="text-yellow-800 text-sm">
+                            ⏳ Loading Stripe payment system...
+                          </p>
+                          <p className="text-yellow-600 text-xs mt-1">
+                            Please wait while we initialize the payment form.
+                          </p>
+                        </div>
+                      ) : stripePromise ? (
+                        <Elements 
+                          stripe={stripePromise} 
+                          options={{ 
+                            clientSecret,
+                            appearance: {
+                              theme: 'stripe',
+                            },
+                            locale: 'en'
+                          }}
+                        >
+                          <CheckoutForm
+                            clientSecret={clientSecret}
+                            amount={total}
+                            onSuccess={handlePaymentSuccess}
+                            onError={handlePaymentError}
+                          />
+                        </Elements>
+                      ) : (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                          <p className="text-red-800 text-sm font-semibold mb-2">
+                            ❌ Failed to load Stripe
+                          </p>
+                          <p className="text-red-700 text-xs mb-1">
+                            Key: {STRIPE_PUBLISHABLE_KEY.substring(0, 20)}...
+                          </p>
+                          <p className="text-red-700 text-xs mb-1">
+                            Key length: {STRIPE_PUBLISHABLE_KEY.length} (should be ~107 characters)
+                          </p>
+                          <p className="text-red-600 text-xs mt-2">
+                            Please check your browser console (F12) for detailed error messages.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-3 mb-4">
+                      <h3 className="font-semibold text-gray-900">Payment Method</h3>
+                      <div className="space-y-2">
+                        <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                          <input
+                            type="radio"
+                            name="paymentMethod"
+                            value="card"
+                            checked={paymentMethod === 'card'}
+                            onChange={(e) => setPaymentMethod(e.target.value)}
+                            className="mr-3"
+                          />
+                          <span className="text-gray-900">Credit/Debit Card</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="border-t pt-4 mb-6">
                     <div className="flex justify-between text-xl font-bold text-gray-900 mb-4">
@@ -359,39 +532,37 @@ const Cart = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-3">
-                    <button
-                      onClick={handleCheckout}
-                      disabled={checkoutLoading || paymentProcessing}
-                      className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-lg font-semibold hover:from-green-700 hover:to-green-800 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed relative"
-                    >
-                      {paymentProcessing ? (
-                        <span className="flex items-center justify-center">
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Processing Payment...
-                        </span>
-                      ) : checkoutLoading ? (
-                        <span className="flex items-center justify-center">
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Placing Order...
-                        </span>
-                      ) : (
-                        'Place Order'
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setShowCheckout(false)}
-                      className="w-full bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-                    >
-                      Back
-                    </button>
-                  </div>
+                  {!clientSecret && (
+                    <div className="space-y-3">
+                      <button
+                        onClick={handleCheckout}
+                        disabled={checkoutLoading}
+                        className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-lg font-semibold hover:from-green-700 hover:to-green-800 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed relative"
+                      >
+                        {checkoutLoading ? (
+                          <span className="flex items-center justify-center">
+                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Initializing Payment...
+                          </span>
+                        ) : (
+                          'Continue to Payment'
+                        )}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowCheckout(false);
+                          setClientSecret(null);
+                          setPaymentIntentId(null);
+                        }}
+                        className="w-full bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                      >
+                        Back
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
             </div>

@@ -47,6 +47,7 @@ const CustomerDashboard = () => {
   const getStatusColor = (status) => {
     const colors = {
       pending: 'bg-yellow-100 text-yellow-800',
+      ordered: 'bg-green-100 text-green-800',
       processing: 'bg-blue-100 text-blue-800',
       shipped: 'bg-purple-100 text-purple-800',
       delivered: 'bg-blue-100 text-blue-800',
@@ -83,9 +84,9 @@ const CustomerDashboard = () => {
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 text-sm">Total Spent</p>
+              <p className="text-gray-600 text-sm">Delivered Orders Spend</p>
               <p className="text-3xl font-bold text-blue-600 mt-2">
-                {formatCurrency(kpis?.totalSpent || 0)}
+                {formatCurrency(kpis?.deliveredOrdersSpend || 0)}
               </p>
             </div>
             <div className="bg-blue-100 p-3 rounded-full">
@@ -99,9 +100,9 @@ const CustomerDashboard = () => {
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 text-sm">Items Purchased</p>
+              <p className="text-gray-600 text-sm">Delivered Items Count</p>
               <p className="text-3xl font-bold text-purple-600 mt-2">
-                {kpis?.totalItemsPurchased || 0}
+                {kpis?.deliveredItemsCount || 0}
               </p>
             </div>
             <div className="bg-purple-100 p-3 rounded-full">

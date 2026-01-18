@@ -35,6 +35,7 @@ const AdminOrders = () => {
   const getStatusColor = (status) => {
     const colors = {
       pending: 'bg-yellow-100 text-yellow-800',
+      ordered: 'bg-green-100 text-green-800',
       processing: 'bg-blue-100 text-blue-800',
       shipped: 'bg-purple-100 text-purple-800',
       delivered: 'bg-green-100 text-green-800',
@@ -75,6 +76,7 @@ const AdminOrders = () => {
           >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
+            <option value="ordered">Ordered</option>
             <option value="processing">Processing</option>
             <option value="shipped">Shipped</option>
             <option value="delivered">Delivered</option>
@@ -160,13 +162,33 @@ const AdminOrders = () => {
 
                 {order.shippingAddress && Object.keys(order.shippingAddress).length > 0 && (
                   <div className="pt-4 border-t border-gray-300">
-                    <h4 className="font-semibold text-gray-900 mb-2">Shipping Address</h4>
+                    <h4 className="font-semibold text-gray-900 mb-2">Delivery Address</h4>
                     <p className="text-sm text-gray-700">
                       {order.shippingAddress.firstName} {order.shippingAddress.lastName}<br />
                       {order.shippingAddress.address}<br />
                       {order.shippingAddress.city}, {order.shippingAddress.zipCode}<br />
                       {order.shippingAddress.country}
                     </p>
+                  </div>
+                )}
+
+                {order.deliveryDistance && (
+                  <div className="pt-4 border-t border-gray-300">
+                    <h4 className="font-semibold text-gray-900 mb-2">Delivery Information</h4>
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-600">Distance</p>
+                        <p className="font-medium text-gray-900">{order.deliveryDistance} km</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600">Delivery Fee</p>
+                        <p className="font-medium text-gray-900">€{order.deliveryFee?.toFixed(2) || '0.00'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600">Est. Time</p>
+                        <p className="font-medium text-gray-900">{order.estimatedDeliveryTime} min</p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -180,7 +202,7 @@ const AdminOrders = () => {
                     <span className="font-medium text-gray-900">€{order.tax.toFixed(2)}</span>
                   </div>
                   <div>
-                    <span className="text-gray-600">Shipping: </span>
+                    <span className="text-gray-600">Delivery Cost: </span>
                     <span className="font-medium text-green-600">{order.shipping === 0 ? 'FREE' : `€${order.shipping.toFixed(2)}`}</span>
                   </div>
                 </div>
@@ -217,4 +239,5 @@ const AdminOrders = () => {
 };
 
 export default AdminOrders;
+
 

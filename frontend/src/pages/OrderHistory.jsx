@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getOrders, cancelOrder } from '../services/orderService';
+import { getOrders, cancelOrder, viewReceipt, downloadReceipt } from '../services/orderService';
 import toast from 'react-hot-toast';
 
 const OrderHistory = () => {
@@ -41,15 +41,46 @@ const OrderHistory = () => {
     }
   };
 
+  const handleViewReceipt = async (orderId) => {
+    try {
+      await viewReceipt(orderId);
+    } catch (error) {
+      console.error('Error viewing receipt:', error);
+      toast.error('Failed to open receipt');
+    }
+  };
+
+  const handleDownloadReceipt = async (orderId) => {
+    try {
+      await downloadReceipt(orderId);
+      toast.success('Receipt downloaded');
+    } catch (error) {
+      console.error('Error downloading receipt:', error);
+      toast.error('Failed to download receipt');
+    }
+  };
+
   const getStatusColor = (status) => {
     const colors = {
       pending: 'bg-yellow-100 text-yellow-800',
+      ordered: 'bg-green-100 text-green-800',
       processing: 'bg-blue-100 text-blue-800',
       shipped: 'bg-purple-100 text-purple-800',
       delivered: 'bg-blue-100 text-blue-800',
       cancelled: 'bg-red-100 text-red-800'
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const canCancelOrder = (order) => {
+    if (order.status === 'delivered' || order.status === 'cancelled') {
+      return false;
+    }
+    // Check if order was created within the last 5 minutes
+    const orderCreatedAt = new Date(order.createdAt);
+    const now = new Date();
+    const minutesSinceCreation = (now - orderCreatedAt) / (1000 * 60);
+    return minutesSinceCreation <= 5;
   };
 
   if (loading && orders.length === 0) {
@@ -102,14 +133,44 @@ const OrderHistory = () => {
                   </div>
                   <div className="mt-4 md:mt-0 text-right">
                     <p className="text-2xl font-bold text-blue-600">€{order.total.toFixed(2)}</p>
-                    {order.status !== 'delivered' && order.status !== 'cancelled' && (
-                      <button
-                        onClick={() => handleCancelOrder(order._id)}
-                        className="mt-3 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
-                      >
-                        Cancel Order
-                      </button>
-                    )}
+                    <div className="mt-3 flex flex-col gap-2 items-end">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleViewReceipt(order._id)}
+                          className="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-2"
+                          title="View Receipt"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          View Receipt
+                        </button>
+                        <button
+                          onClick={() => handleDownloadReceipt(order._id)}
+                          className="bg-green-50 text-green-600 hover:bg-green-100 hover:text-green-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md flex items-center gap-2"
+                          title="Download Receipt"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          Download
+                        </button>
+                      </div>
+                      {canCancelOrder(order) && (
+                        <button
+                          onClick={() => handleCancelOrder(order._id)}
+                          className="bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
+                        >
+                          Cancel Order
+                        </button>
+                      )}
+                      {!canCancelOrder(order) && order.status !== 'delivered' && order.status !== 'cancelled' && (
+                        <p className="text-xs text-gray-500">
+                          Cancellation window expired (5 minutes)
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -151,13 +212,33 @@ const OrderHistory = () => {
 
                 {order.shippingAddress && Object.keys(order.shippingAddress).length > 0 && (
                   <div className="pt-4 border-t border-gray-300">
-                    <h4 className="font-semibold text-gray-900 mb-2">Shipping Address</h4>
+                    <h4 className="font-semibold text-gray-900 mb-2">Delivery Address</h4>
                     <p className="text-sm text-gray-700">
                       {order.shippingAddress.firstName} {order.shippingAddress.lastName}<br />
                       {order.shippingAddress.address}<br />
                       {order.shippingAddress.city}, {order.shippingAddress.zipCode}<br />
                       {order.shippingAddress.country}
                     </p>
+                  </div>
+                )}
+
+                {order.deliveryDistance && (
+                  <div className="pt-4 border-t border-gray-300">
+                    <h4 className="font-semibold text-gray-900 mb-2">Delivery Information</h4>
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-600">Distance</p>
+                        <p className="font-medium text-gray-900">{order.deliveryDistance} km</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600">Delivery Fee</p>
+                        <p className="font-medium text-gray-900">€{order.deliveryFee?.toFixed(2) || '0.00'}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600">Est. Time</p>
+                        <p className="font-medium text-gray-900">{order.estimatedDeliveryTime} min</p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -171,8 +252,8 @@ const OrderHistory = () => {
                     <span className="font-medium text-gray-900">€{order.tax.toFixed(2)}</span>
                   </div>
                   <div>
-                    <span className="text-gray-600">Shipping: </span>
-                    <span className="font-medium text-green-600">{order.shipping === 0 ? 'FREE' : `€${order.shipping.toFixed(2)}`}</span>
+                    <span className="text-gray-600">Delivery Cost: </span>
+                    <span className="font-medium text-green-600">{order.deliveryFee ? `€${order.deliveryFee.toFixed(2)}` : (order.shipping === 0 ? 'FREE' : `€${order.shipping.toFixed(2)}`)}</span>
                   </div>
                 </div>
               </div>

@@ -24,6 +24,11 @@ export const getProducts = async (search = '', page = 1, category = 'all', filte
   
   // Add filter parameters
   if (filters.proteinMin) params.proteinMin = filters.proteinMin;
+  if (filters.proteinFilter && filters.proteinFilter !== 'all') params.proteinFilter = filters.proteinFilter;
+  if (filters.popularityFilter && filters.popularityFilter !== 'all') {
+    params.popularityFilter = filters.popularityFilter;
+    params.sort = filters.popularityFilter; // Also set sort for backward compatibility
+  }
   if (filters.nutriscoreGrade && filters.nutriscoreGrade !== 'all') params.nutriscoreGrade = filters.nutriscoreGrade;
   if (filters.bestSeller === true) params.bestSeller = 'true';
   if (filters.filter) params.filter = filters.filter;

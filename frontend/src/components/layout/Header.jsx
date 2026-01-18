@@ -28,6 +28,13 @@ const Header = () => {
   const userIsManager = isManager(currentUser);
   const userIsCustomer = userRole === 'customer';
 
+  // Format role for display (employee -> rider)
+  const getDisplayRole = (role) => {
+    if (!role) return 'User';
+    if (role === 'employee') return 'Rider';
+    return role.charAt(0).toUpperCase() + role.slice(1);
+  };
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -58,13 +65,16 @@ const Header = () => {
           <nav className="hidden md:flex items-center space-x-8">
             {currentUser ? (
               <>
-                <Link 
-                  to="/products" 
-                  className="text-white hover:text-orange-400 font-semibold transition-all duration-200 relative group"
-                >
-                  Products
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all duration-300"></span>
-                </Link>
+                {/* Products link - only for customers and managers (not riders or admins) */}
+                {(userIsCustomer || (userIsManager && !userIsAdmin)) && (
+                  <Link 
+                    to="/products" 
+                    className="text-white hover:text-orange-400 font-semibold transition-all duration-200 relative group"
+                  >
+                    Products
+                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all duration-300"></span>
+                  </Link>
+                )}
                 <Link 
                   to="/protein-plan" 
                   className="text-white hover:text-orange-400 font-semibold transition-all duration-200 relative group"
@@ -84,10 +94,10 @@ const Header = () => {
                 )}
                 {userIsEmployee && !userIsAdmin && (
                   <Link 
-                    to="/employee" 
+                    to="/rider" 
                     className="text-white hover:text-orange-400 font-semibold transition-all duration-200 relative group"
                   >
-                    Employee
+                    Rider
                     <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all duration-300"></span>
                   </Link>
                 )}
@@ -130,15 +140,15 @@ const Header = () => {
                 )}
                 {(userIsManager || userIsEmployee) && (
                   <Link 
-                    to={userIsManager ? "/manager" : "/employee"} 
+                    to={userIsManager ? "/manager" : "/rider"} 
                     className="text-white hover:text-orange-400 font-semibold transition-all duration-200 relative group"
                   >
                     Orders
                     <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all duration-300"></span>
                   </Link>
                 )}
-                {/* Liked Products - for all authenticated users */}
-                {currentUser && (
+                {/* Liked Products - for customers only (not admins) */}
+                {currentUser && !userIsAdmin && (
                   <Link 
                     to="/liked-products" 
                     className="relative text-white hover:text-orange-400 transition-all duration-200 p-2 hover:bg-white/10 rounded-lg group"
@@ -179,7 +189,7 @@ const Header = () => {
                         {currentUser.user?.firstName || currentUser.email?.split('@')[0]}
                       </span>
                       <span className="text-white/70 text-xs capitalize">
-                        {userRole || 'User'}
+                        {getDisplayRole(userRole)}
                       </span>
                     </div>
                   </div>
@@ -234,13 +244,16 @@ const Header = () => {
             <nav className="flex flex-col space-y-4">
               {currentUser ? (
                 <>
-                  <Link 
-                    to="/products" 
-                    className="text-gray-700 hover:text-blue-600 font-semibold px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Products
-                  </Link>
+                  {/* Products link - only for customers and managers (not riders or admins) */}
+                  {(userIsCustomer || (userIsManager && !userIsAdmin)) && (
+                    <Link 
+                      to="/products" 
+                      className="text-gray-700 hover:text-blue-600 font-semibold px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Products
+                    </Link>
+                  )}
                   <Link 
                     to="/protein-plan" 
                     className="text-gray-700 hover:text-blue-600 font-semibold px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
@@ -260,11 +273,11 @@ const Header = () => {
                   )}
                   {userIsEmployee && !userIsAdmin && (
                     <Link 
-                      to="/employee" 
+                      to="/rider" 
                       className="text-gray-700 hover:text-blue-600 font-semibold px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      Employee
+                      Rider
                     </Link>
                   )}
                   {userIsManager && !userIsAdmin && (
@@ -305,15 +318,15 @@ const Header = () => {
                   )}
                   {(userIsManager || userIsEmployee) && (
                     <Link 
-                      to={userIsManager ? "/manager" : "/employee"} 
+                      to={userIsManager ? "/manager" : "/rider"} 
                       className="text-gray-700 hover:text-blue-600 font-semibold px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       Orders
                     </Link>
                   )}
-                  {/* Liked Products - for all authenticated users */}
-                  {currentUser && (
+                  {/* Liked Products - for customers only (not admins) */}
+                  {currentUser && !userIsAdmin && (
                     <Link 
                       to="/liked-products" 
                       className="text-gray-700 hover:text-pink-600 font-semibold px-4 py-2 rounded-lg hover:bg-pink-50 transition-colors flex items-center gap-2"
@@ -348,7 +361,7 @@ const Header = () => {
                         {currentUser.user?.firstName || currentUser.email}
                       </div>
                       <div className="text-gray-500 text-xs capitalize mt-1">
-                        {userRole || 'User'}
+                        {getDisplayRole(userRole)}
                       </div>
                     </div>
                     <button

@@ -33,7 +33,7 @@ const UserManagement = () => {
   };
 
   const handleRoleChange = async (userId, currentRole) => {
-    const newRole = currentRole === 'employee' ? 'manager' : 'employee';
+    const newRole = currentRole === 'rider' ? 'manager' : 'rider';
     
     if (!window.confirm(`Are you sure you want to change this user's role from ${currentRole} to ${newRole}?`)) {
       return;
@@ -76,8 +76,10 @@ const UserManagement = () => {
         return 'bg-red-100 text-red-800';
       case 'manager':
         return 'bg-purple-100 text-purple-800';
-      case 'employee':
+      case 'rider':
         return 'bg-blue-100 text-blue-800';
+      case 'customer':
+        return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -87,8 +89,8 @@ const UserManagement = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Employee & Manager Management</h1>
-          <p className="text-gray-600">Manage employee and manager accounts, roles, and permissions</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">User Management</h1>
+          <p className="text-gray-600">View and manage all users (customers, riders, and managers)</p>
         </div>
         <Link
           to="/admin/users/create"
@@ -121,9 +123,11 @@ const UserManagement = () => {
               onChange={(e) => setRoleFilter(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="all">All Roles (Employee & Manager)</option>
-              <option value="employee">Employee</option>
+              <option value="all">All Users</option>
+              <option value="customer">Customer</option>
+              <option value="rider">Rider</option>
               <option value="manager">Manager</option>
+              <option value="admin">Admin</option>
             </select>
           </div>
         </div>
@@ -154,9 +158,17 @@ const UserManagement = () => {
                       <div className="text-sm font-medium text-gray-900">
                         {user.firstName} {user.lastName}
                       </div>
+                      {user.phone && (
+                        <div className="text-xs text-gray-400 mt-1">{user.phone}</div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{user.email}</div>
+                      <div className="text-sm text-gray-900 font-medium">{user.email}</div>
+                      {user.address && (
+                        <div className="text-xs text-gray-400 mt-1">
+                          {user.address}, {user.city} {user.zipCode}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleBadgeColor(user.role)}`}>
@@ -168,18 +180,18 @@ const UserManagement = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
-                        {user.role === 'employee' || user.role === 'manager' ? (
+                        {user.role === 'rider' || user.role === 'manager' ? (
                           <>
                             <button
                               onClick={() => handleRoleChange(user._id, user.role)}
                               disabled={changingRole === user._id}
                               className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              title={`Change to ${user.role === 'employee' ? 'Manager' : 'Employee'}`}
+                              title={`Change to ${user.role === 'rider' ? 'Manager' : 'Rider'}`}
                             >
                               {changingRole === user._id ? (
                                 'Changing...'
                               ) : (
-                                `Make ${user.role === 'employee' ? 'Manager' : 'Employee'}`
+                                `Make ${user.role === 'rider' ? 'Manager' : 'Rider'}`
                               )}
                             </button>
                             <button
@@ -195,6 +207,19 @@ const UserManagement = () => {
                               )}
                             </button>
                           </>
+                        ) : user.role === 'customer' ? (
+                          <button
+                            onClick={() => handleDeleteUser(user._id, `${user.firstName} ${user.lastName}`)}
+                            disabled={deletingUser === user._id}
+                            className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Delete customer"
+                          >
+                            {deletingUser === user._id ? (
+                              'Deleting...'
+                            ) : (
+                              'Delete'
+                            )}
+                          </button>
                         ) : null}
                       </div>
                     </td>

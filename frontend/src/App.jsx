@@ -13,7 +13,7 @@ import OrderHistory from './pages/OrderHistory';
 import LikedProducts from './pages/LikedProducts';
 import ProteinPlanBot from './pages/ProteinPlanBot';
 import CustomerDashboard from './pages/CustomerDashboard';
-import EmployeeDashboard from './pages/EmployeeDashboard';
+import RiderDashboard from './pages/RiderDashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ProductManagement from './pages/admin/ProductManagement';
@@ -23,9 +23,10 @@ import CreateUser from './pages/admin/CreateUser';
 import AdminOrders from './pages/admin/AdminOrders';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import AdminRoute from './components/common/AdminRoute';
-import EmployeeRoute from './components/common/EmployeeRoute';
+import RiderRoute from './components/common/RiderRoute';
 import ManagerRoute from './components/common/ManagerRoute';
 import CustomerRoute from './components/common/CustomerRoute';
+import CustomerOrManagerRoute from './components/common/CustomerOrManagerRoute';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
 
@@ -50,9 +51,9 @@ function App() {
                   <Route 
                     path="/products" 
                     element={
-                      <ProtectedRoute>
+                      <CustomerOrManagerRoute>
                         <Products />
-                      </ProtectedRoute>
+                      </CustomerOrManagerRoute>
                     } 
                   />
                   <Route 
@@ -96,11 +97,11 @@ function App() {
                     } 
                   />
                   <Route 
-                    path="/employee" 
+                    path="/rider" 
                     element={
-                      <EmployeeRoute>
-                        <EmployeeDashboard />
-                      </EmployeeRoute>
+                      <RiderRoute>
+                        <RiderDashboard />
+                      </RiderRoute>
                     } 
                   />
                   <Route 

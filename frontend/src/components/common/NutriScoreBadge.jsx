@@ -41,3 +41,4 @@ const NutriScoreBadge = ({ grade, size = 'md' }) => {
 
 export default NutriScoreBadge;
 
+

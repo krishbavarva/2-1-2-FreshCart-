@@ -147,13 +147,13 @@ const CreateUser = () => {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="customer">Customer</option>
-              <option value="employee">Employee</option>
+              <option value="rider">Rider</option>
               <option value="manager">Manager</option>
               <option value="admin">Admin</option>
             </select>
             <div className="mt-2 text-sm text-gray-600 space-y-1">
               <p><strong>Customer:</strong> Can browse products, place orders, view own dashboard</p>
-              <p><strong>Employee:</strong> Can view/manage orders, view products and stock (read-only)</p>
+              <p><strong>Rider:</strong> Can view/manage orders, view products and stock (read-only)</p>
               <p><strong>Manager:</strong> Can manage products, stock, orders, and view statistics</p>
               <p><strong>Admin:</strong> Full access including user management</p>
             </div>

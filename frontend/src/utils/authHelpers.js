@@ -20,14 +20,23 @@ export const isCustomer = (currentUser) => {
 };
 
 /**
- * Check if current user is employee or higher
+ * Check if current user is rider or higher
  * @param {Object} currentUser - Current user object from AuthContext
- * @returns {boolean} - True if user is employee, manager, or admin
+ * @returns {boolean} - True if user is rider, manager, or admin
  */
-export const isEmployee = (currentUser) => {
+export const isRider = (currentUser) => {
   if (!currentUser) return false;
   const userRole = getUserRole(currentUser);
-  return ['employee', 'manager', 'admin'].includes(userRole);
+  // Also accept 'employee' for backward compatibility
+  return ['rider', 'employee', 'manager', 'admin'].includes(userRole);
+};
+
+/**
+ * @deprecated Use isRider instead
+ * Check if current user is employee or higher (legacy support)
+ */
+export const isEmployee = (currentUser) => {
+  return isRider(currentUser);
 };
 
 /**

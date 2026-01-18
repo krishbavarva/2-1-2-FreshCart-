@@ -27,8 +27,9 @@ const RoleBasedDashboard = () => {
   switch (role) {
     case 'customer':
       return <Navigate to="/dashboard" replace />;
-    case 'employee':
-      return <Navigate to="/employee" replace />;
+    case 'rider':
+    case 'employee': // Backward compatibility
+      return <Navigate to="/rider" replace />;
     case 'manager':
       return <Navigate to="/manager" replace />;
     case 'admin':

@@ -71,6 +71,7 @@ const ManagerDashboard = () => {
   const getStatusColor = (status) => {
     const colors = {
       pending: 'bg-yellow-100 text-yellow-800',
+      ordered: 'bg-green-100 text-green-800',
       processing: 'bg-blue-100 text-blue-800',
       shipped: 'bg-purple-100 text-purple-800',
       delivered: 'bg-blue-100 text-blue-800',
@@ -311,6 +312,7 @@ const ManagerDashboard = () => {
             >
               <option value="all">All</option>
               <option value="pending">Pending</option>
+              <option value="ordered">Ordered</option>
               <option value="processing">Processing</option>
               <option value="shipped">Shipped</option>
               <option value="delivered">Delivered</option>
@@ -335,6 +337,7 @@ const ManagerDashboard = () => {
                   className="mt-2 w-full text-xs px-2 py-1 border rounded"
                 >
                   <option value="pending">Pending</option>
+                  <option value="ordered">Ordered</option>
                   <option value="processing">Processing</option>
                   <option value="shipped">Shipped</option>
                   <option value="delivered">Delivered</option>

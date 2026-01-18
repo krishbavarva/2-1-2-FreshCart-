@@ -15,6 +15,8 @@ const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [proteinFilter, setProteinFilter] = useState('all');
+  const [popularityFilter, setPopularityFilter] = useState('all');
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [suggestions, setSuggestions] = useState([]);
@@ -29,7 +31,7 @@ const Products = () => {
 
   useEffect(() => {
     loadProducts();
-  }, [page, selectedCategory]);
+  }, [page, selectedCategory, proteinFilter, popularityFilter]);
 
   const loadCategories = async () => {
     try {
@@ -47,7 +49,14 @@ const Products = () => {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const data = await getProducts('', page, selectedCategory, {});
+      const filters = {};
+      if (proteinFilter !== 'all') {
+        filters.proteinFilter = proteinFilter;
+      }
+      if (popularityFilter !== 'all') {
+        filters.popularityFilter = popularityFilter;
+      }
+      const data = await getProducts('', page, selectedCategory, filters);
       console.log('📦 Full API Response:', data);
       
       const productsList = Array.isArray(data?.products) ? data.products : [];
@@ -159,6 +168,18 @@ const Products = () => {
     setPage(1);
   };
 
+  const handleProteinFilterChange = (e) => {
+    const filter = e.target.value;
+    setProteinFilter(filter);
+    setPage(1);
+  };
+
+  const handlePopularityFilterChange = (e) => {
+    const filter = e.target.value;
+    setPopularityFilter(filter);
+    setPage(1);
+  };
+
   const handleLike = async (productId, e) => {
     e.stopPropagation();
     if (!currentUser) {
@@ -232,6 +253,8 @@ const Products = () => {
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedCategory('all');
+    setProteinFilter('all');
+    setPopularityFilter('all');
     setPage(1);
   };
 
@@ -267,7 +290,7 @@ const Products = () => {
 
         {/* Filters and Search Section */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             {/* Category Filter */}
             <div className="relative">
               <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
@@ -286,6 +309,43 @@ const Products = () => {
                     {category}
                   </option>
                 ))}
+              </select>
+            </div>
+
+            {/* Protein Filter */}
+            <div className="relative">
+              <label htmlFor="proteinFilter" className="block text-sm font-medium text-gray-700 mb-2">
+                Filter by Protein
+              </label>
+              <select
+                id="proteinFilter"
+                value={proteinFilter}
+                onChange={handleProteinFilterChange}
+                className="w-full px-4 py-3 pr-10 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 font-medium cursor-pointer transition-all hover:border-blue-400"
+              >
+                <option value="all">All Protein Levels</option>
+                <option value="high">High Protein (≥20g/100g)</option>
+                <option value="medium">Medium Protein (10-19g/100g)</option>
+                <option value="low">Low Protein (&lt;10g/100g)</option>
+              </select>
+            </div>
+
+            {/* Popularity Filter */}
+            <div className="relative">
+              <label htmlFor="popularityFilter" className="block text-sm font-medium text-gray-700 mb-2">
+                Sort by Popularity
+              </label>
+              <select
+                id="popularityFilter"
+                value={popularityFilter}
+                onChange={handlePopularityFilterChange}
+                className="w-full px-4 py-3 pr-10 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 font-medium cursor-pointer transition-all hover:border-blue-400"
+              >
+                <option value="all">Default Sorting</option>
+                <option value="most-liked">Most Liked</option>
+                <option value="most-sold">Most Sold</option>
+                <option value="best-seller">Best Seller</option>
+                <option value="trending">Trending</option>
               </select>
             </div>
 
@@ -362,7 +422,7 @@ const Products = () => {
           </div>
 
           {/* Clear Filters Button */}
-          {(searchTerm || selectedCategory !== 'all') && (
+          {(searchTerm || selectedCategory !== 'all' || proteinFilter !== 'all' || popularityFilter !== 'all') && (
             <div className="mt-4">
               <button
                 onClick={clearFilters}
