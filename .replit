@@ -6,7 +6,7 @@ language = "nodejs"
 channel = "stable-22_11"
 
 [deploy]
-run = ["sh", "-c", "npm install && cd frontend && npm install && npm run build && cd .. && node server.js"]
+run = ["sh", "-c", "npm install && npm run build && node server.js"]
 
 [env]
 NODE_ENV = "production"

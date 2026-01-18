@@ -1,0 +1,24 @@
+{
+  "name": "freshcart",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "FreshCart - Full-stack grocery store application",
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install && cd ..",
+    "build": "cd frontend && npm install && npm run build && cd ..",
+    "build:frontend": "cd frontend && npm run build && cd ..",
+    "start": "node server.js",
+    "dev": "cd backend && npm run dev",
+    "test": "cd backend && npm test"
+  },
+  "keywords": [
+    "grocery",
+    "ecommerce",
+    "react",
+    "nodejs",
+    "mongodb"
+  ],
+  "author": "",
+  "license": "ISC"
+}
+
