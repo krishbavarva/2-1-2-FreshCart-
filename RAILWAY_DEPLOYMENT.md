@@ -14,23 +14,27 @@ Railway runs your app in a **fresh container**, so:
 ```json
 {
   "dependencies": {
+    "axios": "^1.13.2",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "mongoose": "^8.4.1",
-    "cors": "^2.8.5",
-    "helmet": "^7.1.0",
-    "cookie-parser": "^1.4.6",
-    "swagger-ui-express": "^5.0.0",
-    "swagger-jsdoc": "^6.2.8",
-    "jsonwebtoken": "^9.0.3",
-    "bcryptjs": "^2.4.3",
     "express-validator": "^7.3.1",
-    "stripe": "^20.2.0"
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.4.1",
+    "stripe": "^20.2.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0"
   }
 }
 ```
 
-**Note:** This project uses `bcryptjs` (not `bcrypt`) for password hashing.
+**Important Notes:**
+- This project uses `bcryptjs` (not `bcrypt`) for password hashing
+- This project uses ESM (`"type": "module"`), so imports use `import` syntax, not `require`
+- `axios` is required for product syncing from Open Food Facts API
 
 **NOT in `devDependencies`!**
 
@@ -101,13 +105,15 @@ require('dotenv').config();
 
 ## 🔧 Troubleshooting
 
-### Error: `ERR_MODULE_NOT_FOUND: Cannot find module 'dotenv'` or `'jsonwebtoken'` or `'bcryptjs'`
+### Error: `ERR_MODULE_NOT_FOUND: Cannot find module 'dotenv'` or `'jsonwebtoken'` or `'bcryptjs'` or `'axios'`
 
 **Fix:**
 1. Check `package.json` - all runtime packages must be in `dependencies`, not `devDependencies`
-2. Run: `npm install jsonwebtoken bcryptjs cors dotenv express mongoose express-validator stripe --save`
+2. Run: `npm install axios bcryptjs cors dotenv express express-validator jsonwebtoken mongoose stripe --save`
 3. Commit and push changes
 4. Redeploy on Railway
+
+**Note:** This project uses `bcryptjs` (not `bcrypt`) and ESM imports (`import`, not `require`).
 
 ### Error: `MongoDB connection failed`
 
