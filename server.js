@@ -8,18 +8,35 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load environment variables - try multiple locations for Replit compatibility
+// In Replit, Secrets are already in process.env, but we load .env for local dev
 dotenv.config(); // Load from root .env (if exists)
 dotenv.config({ path: path.join(__dirname, '.env') }); // Explicit path
 dotenv.config({ path: path.join(__dirname, 'backend', '.env') }); // Backend .env
 
-// In Replit, environment variables come from Secrets, not .env file
-// But we still try to load .env for local development
 // Support both MONGO_URI and MONGODB_URI for compatibility
 const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+
+// CRITICAL: Log all environment variables for debugging (mask sensitive data)
 console.log('\n🔍 Environment Variables Check:');
-console.log('   MONGODB_URI:', mongoUri ? '✅ Found' : '❌ Missing');
+console.log('   MONGODB_URI:', mongoUri ? '✅ Found' : '❌ MISSING!');
+console.log('   MONGO_URI:', process.env.MONGO_URI ? '✅ Found' : '❌ Not set');
 if (mongoUri) {
-  console.log('   Using:', process.env.MONGODB_URI ? 'MONGODB_URI' : 'MONGO_URI');
+  const varName = process.env.MONGODB_URI ? 'MONGODB_URI' : 'MONGO_URI';
+  console.log('   Using variable:', varName);
+  // Log connection string info (safely)
+  if (mongoUri.includes('@')) {
+    const parts = mongoUri.split('@');
+    const user = parts[0].split('://')[1]?.split(':')[0] || 'N/A';
+    const host = parts[1]?.split('/')[0] || 'N/A';
+    console.log('   User:', user);
+    console.log('   Host:', host);
+  }
+} else {
+  console.error('\n❌❌❌ CRITICAL ERROR: MongoDB connection string is MISSING!');
+  console.error('   In Replit: Go to 🔒 Secrets and add:');
+  console.error('   Key: MONGODB_URI');
+  console.error('   Value: mongodb+srv://krishbavarva:o8RVjnUOeMUUEd68@cluster0.atewaqb.mongodb.net/grocery?retryWrites=true&w=majority');
+  console.error('   NO SPACES around = sign!\n');
 }
 console.log('   PORT:', process.env.PORT || 'Not set (using default 3000)');
 console.log('   NODE_ENV:', process.env.NODE_ENV || 'Not set');

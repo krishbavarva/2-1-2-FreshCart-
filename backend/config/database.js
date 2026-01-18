@@ -89,6 +89,7 @@ const connectDB = async (retryCount = 0) => {
 
     // Connect with increased timeout for Replit
     console.log('   Connecting... (this may take up to 30 seconds)');
+    console.log('   ⏳ Please wait...');
     await mongoose.connect(currentMongoUri, connectionOptions);
     
     isConnected = true;
@@ -102,29 +103,40 @@ const connectDB = async (retryCount = 0) => {
 
   } catch (error) {
     isConnected = false;
-    console.error(`\n❌ MongoDB connection error (Attempt ${connectionAttempts}):`, error.message);
+    console.error(`\n❌❌❌ MongoDB connection FAILED (Attempt ${connectionAttempts}):`);
+    console.error('   Error:', error.message);
+    console.error('   Error Type:', error.name);
+    if (error.code) console.error('   Error Code:', error.code);
+    
+    // Show specific error messages
+    if (error.message.includes('authentication failed') || error.message.includes('bad auth')) {
+      console.error('\n   🔴 AUTHENTICATION ERROR:');
+      console.error('      - Check username and password in connection string');
+      console.error('      - Verify database user exists in MongoDB Atlas');
+    } else if (error.message.includes('timeout') || error.message.includes('ECONNREFUSED')) {
+      console.error('\n   🔴 NETWORK ERROR (MOST COMMON!):');
+      console.error('      - MongoDB Atlas → Network Access → Add IP: 0.0.0.0/0');
+      console.error('      - Wait 2 minutes after adding IP');
+      console.error('      - Check if MongoDB Atlas cluster is running (not paused)');
+    } else if (error.message.includes('ENOTFOUND') || error.message.includes('DNS')) {
+      console.error('\n   🔴 DNS ERROR:');
+      console.error('      - Check connection string hostname is correct');
+    }
     
     // Retry logic
     if (retryCount < MAX_RETRY_ATTEMPTS) {
-      const delay = RETRY_DELAY * (retryCount + 1); // Exponential backoff
-      console.log(`⏳ Retrying in ${delay / 1000} seconds... (${retryCount + 1}/${MAX_RETRY_ATTEMPTS})`);
-      
+      const delay = RETRY_DELAY * (retryCount + 1);
+      console.log(`\n⏳ Retrying in ${delay / 1000} seconds... (${retryCount + 1}/${MAX_RETRY_ATTEMPTS})`);
       setTimeout(() => {
         connectDB(retryCount + 1);
       }, delay);
     } else {
-      console.error('\n💡 Troubleshooting tips:');
-      console.error('   1. Check if MONGODB_URI is set correctly in Replit Secrets');
-      console.error('   2. For MongoDB Atlas:');
-      console.error('      - Go to Network Access → Add IP Address');
-      console.error('      - Add: 0.0.0.0/0 (allow all IPs) for Replit');
-      console.error('      - Or add specific Replit IP ranges');
-      console.error('   3. Verify username and password are correct in connection string');
-      console.error('   4. Check MongoDB Atlas cluster is running (not paused)');
-      console.error('   5. For Replit: Make sure MONGODB_URI secret is set correctly');
-      console.error('   6. Test connection string format: mongodb+srv://user:pass@cluster.mongodb.net/dbname');
-      console.error('\n⚠️  Server will continue, but database operations will fail!');
-      console.error('   The app will work, but you need to fix MongoDB connection for full functionality.\n');
+      console.error('\n💡💡💡 QUICK FIX (2 MINUTES):');
+      console.error('   1. MongoDB Atlas → Network Access → Add IP: 0.0.0.0/0 (WAIT 2 MINUTES!)');
+      console.error('   2. Replit → Secrets → Add: MONGODB_URI=mongodb+srv://krishbavarva:o8RVjnUOeMUUEd68@cluster0.atewaqb.mongodb.net/grocery?retryWrites=true&w=majority');
+      console.error('   3. NO SPACES around = sign!');
+      console.error('   4. Restart Replit server');
+      console.error('\n⚠️  Server will continue, but database operations will fail!\n');
     }
   }
 };
