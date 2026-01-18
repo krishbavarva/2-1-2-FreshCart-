@@ -46,12 +46,31 @@ app.use(cookieParser());
 console.log('\n📋 Environment Check:');
 console.log('   PORT:', PORT);
 console.log('   MONGODB_URI:', process.env.MONGODB_URI ? '✅ Set' : '❌ Not set');
+if (process.env.MONGODB_URI) {
+  // Log connection string info (safely)
+  const uri = process.env.MONGODB_URI;
+  if (uri.includes('@')) {
+    const parts = uri.split('@');
+    const user = parts[0].split('://')[1]?.split(':')[0] || 'N/A';
+    const host = parts[1]?.split('/')[0] || 'N/A';
+    console.log('   MongoDB User:', user);
+    console.log('   MongoDB Host:', host);
+  }
+}
 console.log('   NODE_ENV:', process.env.NODE_ENV || 'development');
+console.log('   JWT_SECRET:', process.env.JWT_SECRET ? '✅ Set' : '❌ Not set');
+console.log('   STRIPE_SECRET_KEY:', process.env.STRIPE_SECRET_KEY ? '✅ Set' : '❌ Not set');
 
 // Connect to MongoDB asynchronously (don't block server startup)
 // This allows health checks to pass even if MongoDB is still connecting
+console.log('\n🔄 Starting MongoDB connection (non-blocking)...');
 connectDB().catch(err => {
-  console.error('MongoDB connection error (non-blocking):', err.message);
+  console.error('❌ MongoDB connection error (non-blocking):', err.message);
+  console.error('   The server will continue, but database features will not work.');
+  console.error('   Please check:');
+  console.error('   1. MONGODB_URI is set in Replit Secrets');
+  console.error('   2. MongoDB Atlas Network Access allows 0.0.0.0/0');
+  console.error('   3. Connection string format is correct\n');
 });
 
 // Check MongoDB connection status

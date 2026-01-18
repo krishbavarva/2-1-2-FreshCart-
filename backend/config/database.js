@@ -5,15 +5,18 @@ dotenv.config();
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/grocery';
 
-// Connection options with retry logic
+// Connection options with retry logic - optimized for Replit/cloud deployments
 const connectionOptions = {
-  serverSelectionTimeoutMS: 10000, // How long to try selecting a server
-  socketTimeoutMS: 45000, // How long to wait for a socket to be established
-  connectTimeoutMS: 10000, // How long to wait for initial connection
+  serverSelectionTimeoutMS: 30000, // Increased for Replit (30 seconds)
+  socketTimeoutMS: 60000, // Increased for Replit (60 seconds)
+  connectTimeoutMS: 30000, // Increased for Replit (30 seconds)
   maxPoolSize: 10, // Maximum number of connections in the connection pool
-  minPoolSize: 5, // Minimum number of connections in the connection pool
+  minPoolSize: 1, // Reduced for Replit (minimum connections)
   retryWrites: true, // Retry writes if they fail due to transient errors
   retryReads: true, // Retry reads if they fail due to transient errors
+  // Additional options for cloud deployments
+  heartbeatFrequencyMS: 10000, // Send heartbeat every 10 seconds
+  serverSelectionRetryMS: 5000, // Retry server selection every 5 seconds
 };
 
 // Track connection state
@@ -39,14 +42,27 @@ const connectDB = async (retryCount = 0) => {
   try {
     connectionAttempts++;
     console.log(`\n🔍 Attempting to connect to MongoDB... (Attempt ${connectionAttempts})`);
-    console.log(`   URI: ${currentMongoUri.includes('@') ? currentMongoUri.split('@')[0] + '@...' : currentMongoUri}`);
     
+    // Log connection details (safely, without exposing password)
     if (currentMongoUri.includes('@')) {
-      console.log('   Type: MongoDB Atlas');
+      const uriParts = currentMongoUri.split('@');
+      const credentials = uriParts[0].split('://')[1];
+      const username = credentials.split(':')[0];
+      console.log(`   Type: MongoDB Atlas`);
+      console.log(`   Username: ${username}`);
+      console.log(`   Host: ${uriParts[1]?.split('/')[0] || 'N/A'}`);
     } else {
-      console.log('   Type: Local MongoDB');
+      console.log(`   Type: Local MongoDB`);
+      console.log(`   URI: ${currentMongoUri}`);
+    }
+    
+    // Validate URI format
+    if (!currentMongoUri || currentMongoUri === 'mongodb://localhost:27017/grocery') {
+      console.warn('⚠️  Using default MongoDB URI. Make sure MONGODB_URI is set in environment variables!');
     }
 
+    // Connect with increased timeout for Replit
+    console.log('   Connecting... (this may take up to 30 seconds)');
     await mongoose.connect(currentMongoUri, connectionOptions);
     
     isConnected = true;
@@ -72,12 +88,17 @@ const connectDB = async (retryCount = 0) => {
       }, delay);
     } else {
       console.error('\n💡 Troubleshooting tips:');
-      console.error('   1. Check if MONGODB_URI is set correctly in .env file');
-      console.error('   2. For MongoDB Atlas: Check network access (IP whitelist)');
-      console.error('   3. For Local MongoDB: Make sure MongoDB service is running');
-      console.error('   4. Verify username and password are correct');
-      console.error('   5. Check your internet connection');
-      console.error('\n⚠️  Server will continue, but database operations will fail!\n');
+      console.error('   1. Check if MONGODB_URI is set correctly in Replit Secrets');
+      console.error('   2. For MongoDB Atlas:');
+      console.error('      - Go to Network Access → Add IP Address');
+      console.error('      - Add: 0.0.0.0/0 (allow all IPs) for Replit');
+      console.error('      - Or add specific Replit IP ranges');
+      console.error('   3. Verify username and password are correct in connection string');
+      console.error('   4. Check MongoDB Atlas cluster is running (not paused)');
+      console.error('   5. For Replit: Make sure MONGODB_URI secret is set correctly');
+      console.error('   6. Test connection string format: mongodb+srv://user:pass@cluster.mongodb.net/dbname');
+      console.error('\n⚠️  Server will continue, but database operations will fail!');
+      console.error('   The app will work, but you need to fix MongoDB connection for full functionality.\n');
     }
   }
 };
