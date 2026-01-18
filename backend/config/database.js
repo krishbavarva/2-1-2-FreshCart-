@@ -29,12 +29,13 @@ const connectionOptions = {
   retryReads: true, // Retry reads if they fail due to transient errors
   // Additional options for cloud deployments
   heartbeatFrequencyMS: 10000, // Send heartbeat every 10 seconds
-  serverSelectionRetryMS: 5000, // Retry server selection every 5 seconds
+  // Note: serverSelectionRetryMS is not a valid option - removed to fix MongoParseError
 };
 
 // Track connection state
 let isConnected = false;
 let connectionAttempts = 0;
+let isConnecting = false; // Prevent multiple simultaneous connection attempts
 const MAX_RETRY_ATTEMPTS = 5;
 const RETRY_DELAY = 5000; // 5 seconds
 
@@ -44,9 +45,13 @@ const RETRY_DELAY = 5000; // 5 seconds
 const connectDB = async (retryCount = 0) => {
   // If already connected, return
   if (mongoose.connection.readyState === 1) {
-    console.log('✅ MongoDB already connected');
     isConnected = true;
     return;
+  }
+
+  // Prevent multiple simultaneous connection attempts
+  if (isConnecting) {
+    return; // Already attempting to connect, don't start another attempt
   }
 
   // Re-read MONGODB_URI from environment to ensure we have the latest value
@@ -66,76 +71,83 @@ const connectDB = async (retryCount = 0) => {
   }
 
   try {
+    isConnecting = true; // Mark as connecting to prevent duplicate attempts
     connectionAttempts++;
-    console.log(`\n🔍 Attempting to connect to MongoDB... (Attempt ${connectionAttempts})`);
     
-    // Log connection details (safely, without exposing password)
-    if (currentMongoUri.includes('@')) {
-      const uriParts = currentMongoUri.split('@');
-      const credentials = uriParts[0].split('://')[1];
-      const username = credentials.split(':')[0];
-      console.log(`   Type: MongoDB Atlas`);
-      console.log(`   Username: ${username}`);
-      console.log(`   Host: ${uriParts[1]?.split('/')[0] || 'N/A'}`);
-    } else {
-      console.log(`   Type: Local MongoDB`);
-      console.log(`   URI: ${currentMongoUri}`);
-    }
-    
-    // Validate URI format
-    if (!currentMongoUri || currentMongoUri === 'mongodb://localhost:27017/grocery') {
-      console.warn('⚠️  Using default MongoDB URI. Make sure MONGODB_URI is set in environment variables!');
+    // Only log first attempt and every 10th attempt to reduce log spam
+    if (connectionAttempts === 1 || connectionAttempts % 10 === 0) {
+      console.log(`\n🔍 Attempting to connect to MongoDB... (Attempt ${connectionAttempts})`);
+      
+      // Log connection details (safely, without exposing password)
+      if (currentMongoUri.includes('@')) {
+        const uriParts = currentMongoUri.split('@');
+        const credentials = uriParts[0].split('://')[1];
+        const username = credentials.split(':')[0];
+        console.log(`   Type: MongoDB Atlas`);
+        console.log(`   Username: ${username}`);
+        console.log(`   Host: ${uriParts[1]?.split('/')[0] || 'N/A'}`);
+      } else {
+        console.log(`   Type: Local MongoDB`);
+      }
     }
 
     // Connect with increased timeout for Replit
-    console.log('   Connecting... (this may take up to 30 seconds)');
-    console.log('   ⏳ Please wait...');
     await mongoose.connect(currentMongoUri, connectionOptions);
     
     isConnected = true;
+    isConnecting = false; // Reset connecting flag
     connectionAttempts = 0; // Reset on successful connection
     
-    console.log('✅ Connected to MongoDB successfully!');
+    console.log('\n✅ Connected to MongoDB successfully!');
     console.log(`📦 Database: ${mongoose.connection.name}`);
-    console.log(`🔗 Connection State: ${mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'}`);
     console.log(`🌐 Host: ${mongoose.connection.host || 'N/A'}`);
     console.log(`🔌 Port: ${mongoose.connection.port || 'N/A'}\n`);
 
   } catch (error) {
     isConnected = false;
-    console.error(`\n❌❌❌ MongoDB connection FAILED (Attempt ${connectionAttempts}):`);
-    console.error('   Error:', error.message);
-    console.error('   Error Type:', error.name);
-    if (error.code) console.error('   Error Code:', error.code);
+    isConnecting = false; // Reset connecting flag
     
-    // Show specific error messages
-    if (error.message.includes('authentication failed') || error.message.includes('bad auth')) {
-      console.error('\n   🔴 AUTHENTICATION ERROR:');
-      console.error('      - Check username and password in connection string');
-      console.error('      - Verify database user exists in MongoDB Atlas');
-    } else if (error.message.includes('timeout') || error.message.includes('ECONNREFUSED')) {
-      console.error('\n   🔴 NETWORK ERROR (MOST COMMON!):');
-      console.error('      - MongoDB Atlas → Network Access → Add IP: 0.0.0.0/0');
-      console.error('      - Wait 2 minutes after adding IP');
-      console.error('      - Check if MongoDB Atlas cluster is running (not paused)');
-    } else if (error.message.includes('ENOTFOUND') || error.message.includes('DNS')) {
-      console.error('\n   🔴 DNS ERROR:');
-      console.error('      - Check connection string hostname is correct');
+    // Only log errors on first attempt, last attempt, or every 10th attempt to reduce spam
+    const shouldLog = connectionAttempts === 1 || retryCount === MAX_RETRY_ATTEMPTS - 1 || connectionAttempts % 10 === 0;
+    
+    if (shouldLog) {
+      console.error(`\n❌ MongoDB connection FAILED (Attempt ${connectionAttempts}):`);
+      console.error('   Error:', error.message);
+      console.error('   Error Type:', error.name);
+      
+      // Show specific error messages only on first or last attempt
+      if (connectionAttempts === 1 || retryCount === MAX_RETRY_ATTEMPTS - 1) {
+        if (error.message.includes('authentication failed') || error.message.includes('bad auth')) {
+          console.error('\n   🔴 AUTHENTICATION ERROR:');
+          console.error('      - Check username and password in connection string');
+          console.error('      - Verify database user exists in MongoDB Atlas');
+        } else if (error.message.includes('timeout') || error.message.includes('ECONNREFUSED')) {
+          console.error('\n   🔴 NETWORK ERROR (MOST COMMON!):');
+          console.error('      - MongoDB Atlas → Network Access → Add IP: 0.0.0.0/0');
+          console.error('      - Wait 2 minutes after adding IP');
+          console.error('      - Check if MongoDB Atlas cluster is running (not paused)');
+        } else if (error.message.includes('ENOTFOUND') || error.message.includes('DNS')) {
+          console.error('\n   🔴 DNS ERROR:');
+          console.error('      - Check connection string hostname is correct');
+        }
+      }
     }
     
     // Retry logic
     if (retryCount < MAX_RETRY_ATTEMPTS) {
       const delay = RETRY_DELAY * (retryCount + 1);
-      console.log(`\n⏳ Retrying in ${delay / 1000} seconds... (${retryCount + 1}/${MAX_RETRY_ATTEMPTS})`);
+      if (shouldLog) {
+        console.log(`⏳ Retrying in ${delay / 1000} seconds... (${retryCount + 1}/${MAX_RETRY_ATTEMPTS})`);
+      }
       setTimeout(() => {
         connectDB(retryCount + 1);
       }, delay);
     } else {
       console.error('\n💡💡💡 QUICK FIX (2 MINUTES):');
       console.error('   1. MongoDB Atlas → Network Access → Add IP: 0.0.0.0/0 (WAIT 2 MINUTES!)');
-      console.error('   2. Replit → Secrets → Add: MONGODB_URI=mongodb+srv://krishbavarva:o8RVjnUOeMUUEd68@cluster0.atewaqb.mongodb.net/grocery?retryWrites=true&w=majority');
+      console.error('   2. Railway → Variables → Add: MONGODB_URI=mongodb+srv://krishbavarva:o8RVjnUOeMUUEd68@cluster0.atewaqb.mongodb.net/grocery?retryWrites=true&w=majority');
       console.error('   3. NO SPACES around = sign!');
-      console.error('   4. Restart Replit server');
+      console.error('   4. Restart Railway service');
       console.error('\n⚠️  Server will continue, but database operations will fail!\n');
     }
   }
@@ -160,18 +172,21 @@ const setupConnectionHandlers = () => {
   // Connection disconnected
   mongoose.connection.on('disconnected', () => {
     isConnected = false;
-    const currentUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/grocery';
-    console.warn('⚠️  MongoDB disconnected. Attempting to reconnect...');
-    console.log(`   Target: ${currentUri.includes('@') ? 'MongoDB Atlas' : 'Local MongoDB'}`);
+    isConnecting = false; // Reset connecting flag
     
-    // Automatically reconnect after a delay
-    setTimeout(() => {
-      if (!isConnected) {
-        console.log('🔄 Attempting to reconnect to MongoDB...');
-        // Use current URI from environment
-        connectDB(0);
-      }
-    }, RETRY_DELAY);
+    // Only log disconnect if not already attempting to reconnect (to reduce spam)
+    if (!isConnecting) {
+      const currentUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/grocery';
+      console.warn('⚠️  MongoDB disconnected. Attempting to reconnect...');
+      
+      // Automatically reconnect after a delay
+      setTimeout(() => {
+        if (!isConnected && !isConnecting) {
+          // Use current URI from environment
+          connectDB(0);
+        }
+      }, RETRY_DELAY);
+    }
   });
 
   // Connection reconnected
