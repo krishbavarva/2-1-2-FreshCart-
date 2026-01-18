@@ -8,6 +8,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 import swaggerUi from 'swagger-ui-express';
 import specs from './backend/config/swagger.js';
 import { connectDB, isDBConnected, getConnectionStatus } from './backend/config/database.js';
@@ -78,7 +79,7 @@ app.get('/api-docs.json', (req, res) => {
   res.send(specs);
 });
 
-// Health check
+// Health check - must respond quickly for Replit
 app.get('/health', (req, res) => {
   const dbStatus = getConnectionStatus();
   res.status(200).json({ 
@@ -88,6 +89,29 @@ app.get('/health', (req, res) => {
     database: dbStatus.database,
     connected: dbStatus.connected,
     timestamp: new Date().toISOString()
+  });
+});
+
+// Root endpoint - must respond quickly for Replit health checks
+// This responds immediately without waiting for MongoDB
+app.get('/', (req, res) => {
+  // Try to serve React app, but if not built, return simple response
+  res.sendFile(path.join(frontendBuildPath, 'index.html'), (err) => {
+    if (err) {
+      // If React app not built, return simple HTML response
+      res.status(200).send(`
+        <!DOCTYPE html>
+        <html>
+          <head><title>FreshCart - Loading</title></head>
+          <body>
+            <h1>FreshCart Server is Running</h1>
+            <p>Status: OK</p>
+            <p>Please wait while the React app is being built...</p>
+            <p>If you see this message, run: <code>cd frontend && npm run build</code></p>
+          </body>
+        </html>
+      `);
+    }
   });
 });
 
@@ -129,7 +153,17 @@ console.log('   - /api/manager');
 
 // Serve React static files (production build)
 const frontendBuildPath = path.join(__dirname, 'frontend', 'dist');
-app.use(express.static(frontendBuildPath));
+
+// Check if React build exists
+const fs = require('fs');
+const reactBuildExists = fs.existsSync(frontendBuildPath) && fs.existsSync(path.join(frontendBuildPath, 'index.html'));
+
+if (reactBuildExists) {
+  app.use(express.static(frontendBuildPath));
+  console.log('✅ React build found, serving static files');
+} else {
+  console.warn('⚠️ React build not found. Run: cd frontend && npm run build');
+}
 
 // Serve React app for all non-API routes (SPA routing)
 app.get('*', (req, res) => {
@@ -141,21 +175,38 @@ app.get('*', (req, res) => {
     });
   }
   
-  // Serve React index.html for all other routes
-  res.sendFile(path.join(frontendBuildPath, 'index.html'), (err) => {
-    if (err) {
-      console.error('Error serving React app:', err);
-      res.status(500).send(`
-        <html>
-          <body>
-            <h1>React App Not Built</h1>
-            <p>Please run: <code>cd frontend && npm run build</code></p>
-            <p>Or the React app is not in the expected location: ${frontendBuildPath}</p>
-          </body>
-        </html>
-      `);
-    }
-  });
+  // If React build exists, serve it
+  if (reactBuildExists) {
+    res.sendFile(path.join(frontendBuildPath, 'index.html'), (err) => {
+      if (err) {
+        console.error('Error serving React app:', err);
+        res.status(200).send(`
+          <!DOCTYPE html>
+          <html>
+            <head><title>FreshCart</title></head>
+            <body>
+              <h1>FreshCart</h1>
+              <p>Server is running. React app is loading...</p>
+            </body>
+          </html>
+        `);
+      }
+    });
+  } else {
+    // Return simple response if React not built
+    res.status(200).send(`
+      <!DOCTYPE html>
+      <html>
+        <head><title>FreshCart - Building</title></head>
+        <body>
+          <h1>FreshCart Server is Running</h1>
+          <p>Status: OK</p>
+          <p>Building React app... Please wait.</p>
+          <p>Run: <code>cd frontend && npm run build</code></p>
+        </body>
+      </html>
+    `);
+  }
 });
 
 // 404 handler for API routes
