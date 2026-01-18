@@ -84,6 +84,16 @@ export const createUser = async (userData) => {
   return response.data;
 };
 
+export const updateUserRole = async (userId, role) => {
+  const response = await api.put(`/users/${userId}/role`, { role });
+  return response.data;
+};
+
+export const deleteUser = async (userId) => {
+  const response = await api.delete(`/users/${userId}`);
+  return response.data;
+};
+
 export default {
   getAdminProducts,
   getAdminProduct,
@@ -95,7 +105,9 @@ export default {
   getAllOrders,
   getAdminCategories,
   getAllUsers,
-  createUser
+  createUser,
+  updateUserRole,
+  deleteUser
 };
 
 

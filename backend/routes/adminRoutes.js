@@ -13,7 +13,9 @@ import {
   getAllOrders,
   getCategories,
   createUser,
-  getAllUsers
+  getAllUsers,
+  updateUserRole,
+  deleteUser
 } from '../controllers/adminController.js';
 
 const router = express.Router();
@@ -252,6 +254,56 @@ router.get('/users', getAllUsers);
  *         description: User created
  */
 router.post('/users', createUser);
+
+/**
+ * @swagger
+ * /api/admin/users/{id}/role:
+ *   put:
+ *     summary: Update user role (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               role:
+ *                 type: string
+ *                 enum: [employee, manager]
+ *     responses:
+ *       200:
+ *         description: User role updated
+ */
+router.put('/users/:id/role', updateUserRole);
+
+/**
+ * @swagger
+ * /api/admin/users/{id}:
+ *   delete:
+ *     summary: Delete user (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User deleted
+ */
+router.delete('/users/:id', deleteUser);
 
 export default router;
 

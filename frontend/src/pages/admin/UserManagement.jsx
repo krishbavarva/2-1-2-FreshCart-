@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getAllUsers } from '../../services/adminService';
+import { getAllUsers, updateUserRole, deleteUser } from '../../services/adminService';
 import toast from 'react-hot-toast';
 
 const UserManagement = () => {
@@ -8,6 +8,8 @@ const UserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [changingRole, setChangingRole] = useState(null);
+  const [deletingUser, setDeletingUser] = useState(null);
 
   useEffect(() => {
     loadUsers();
@@ -30,14 +32,54 @@ const UserManagement = () => {
     }
   };
 
+  const handleRoleChange = async (userId, currentRole) => {
+    const newRole = currentRole === 'employee' ? 'manager' : 'employee';
+    
+    if (!window.confirm(`Are you sure you want to change this user's role from ${currentRole} to ${newRole}?`)) {
+      return;
+    }
+
+    try {
+      setChangingRole(userId);
+      await updateUserRole(userId, newRole);
+      toast.success(`User role changed to ${newRole} successfully`);
+      loadUsers();
+    } catch (error) {
+      console.error('Error changing role:', error);
+      toast.error(error.response?.data?.message || 'Failed to change user role');
+    } finally {
+      setChangingRole(null);
+    }
+  };
+
+  const handleDeleteUser = async (userId, userName) => {
+    if (!window.confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setDeletingUser(userId);
+      await deleteUser(userId);
+      toast.success('User deleted successfully');
+      loadUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error(error.response?.data?.message || 'Failed to delete user');
+    } finally {
+      setDeletingUser(null);
+    }
+  };
+
   const getRoleBadgeColor = (role) => {
     switch (role) {
       case 'admin':
         return 'bg-red-100 text-red-800';
       case 'manager':
         return 'bg-purple-100 text-purple-800';
-      default:
+      case 'employee':
         return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -45,8 +87,8 @@ const UserManagement = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">User Management</h1>
-          <p className="text-gray-600">Manage user accounts and roles</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Employee & Manager Management</h1>
+          <p className="text-gray-600">Manage employee and manager accounts, roles, and permissions</p>
         </div>
         <Link
           to="/admin/users/create"
@@ -79,9 +121,8 @@ const UserManagement = () => {
               onChange={(e) => setRoleFilter(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="all">All Roles</option>
-              <option value="user">Customer</option>
-              <option value="admin">Admin</option>
+              <option value="all">All Roles (Employee & Manager)</option>
+              <option value="employee">Employee</option>
               <option value="manager">Manager</option>
             </select>
           </div>
@@ -103,6 +144,7 @@ const UserManagement = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -118,11 +160,43 @@ const UserManagement = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleBadgeColor(user.role)}`}>
-                        {user.role === 'user' ? 'Customer' : user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                        {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(user.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center space-x-2">
+                        {user.role === 'employee' || user.role === 'manager' ? (
+                          <>
+                            <button
+                              onClick={() => handleRoleChange(user._id, user.role)}
+                              disabled={changingRole === user._id}
+                              className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={`Change to ${user.role === 'employee' ? 'Manager' : 'Employee'}`}
+                            >
+                              {changingRole === user._id ? (
+                                'Changing...'
+                              ) : (
+                                `Make ${user.role === 'employee' ? 'Manager' : 'Employee'}`
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(user._id, `${user.firstName} ${user.lastName}`)}
+                              disabled={deletingUser === user._id}
+                              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Delete user"
+                            >
+                              {deletingUser === user._id ? (
+                                'Deleting...'
+                              ) : (
+                                'Delete'
+                              )}
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -521,16 +521,19 @@ export const getAllUsers = async (req, res) => {
 
     const query = {};
 
+    // Filter to show only employees and managers by default
+    if (!role || role === 'all') {
+      query.role = { $in: ['employee', 'manager'] };
+    } else if (role !== 'all') {
+      query.role = role;
+    }
+
     if (search) {
       query.$or = [
         { firstName: { $regex: search, $options: 'i' } },
         { lastName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } }
       ];
-    }
-
-    if (role && role !== 'all') {
-      query.role = role;
     }
 
     const users = await User.find(query)
@@ -554,6 +557,110 @@ export const getAllUsers = async (req, res) => {
     console.error('Error fetching users:', error);
     res.status(500).json({
       message: 'Error fetching users',
+      error: error.message
+    });
+  }
+};
+
+// Update user role (Admin only)
+export const updateUserRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    // Validate role
+    if (!role || !['employee', 'manager'].includes(role)) {
+      return res.status(400).json({
+        message: 'Invalid role. Must be employee or manager'
+      });
+    }
+
+    // Prevent admin from changing their own role
+    if (id === req.user.userId) {
+      return res.status(400).json({
+        message: 'You cannot change your own role'
+      });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found'
+      });
+    }
+
+    // Prevent changing admin role
+    if (user.role === 'admin') {
+      return res.status(403).json({
+        message: 'Cannot change admin role'
+      });
+    }
+
+    // Update role
+    user.role = role;
+    await user.save();
+
+    res.json({
+      message: 'User role updated successfully',
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    res.status(500).json({
+      message: 'Error updating user role',
+      error: error.message
+    });
+  }
+};
+
+// Delete user (Admin only)
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Prevent admin from deleting themselves
+    if (id === req.user.userId) {
+      return res.status(400).json({
+        message: 'You cannot delete your own account'
+      });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found'
+      });
+    }
+
+    // Prevent deleting admin
+    if (user.role === 'admin') {
+      return res.status(403).json({
+        message: 'Cannot delete admin account'
+      });
+    }
+
+    // Only allow deleting employees and managers
+    if (!['employee', 'manager'].includes(user.role)) {
+      return res.status(403).json({
+        message: 'Can only delete employees and managers'
+      });
+    }
+
+    await User.findByIdAndDelete(id);
+
+    res.json({
+      message: 'User deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({
+      message: 'Error deleting user',
       error: error.message
     });
   }
