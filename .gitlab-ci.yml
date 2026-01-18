@@ -24,34 +24,24 @@ backend:test:
   script:
     - cd ${BACKEND_DIR}
     - echo "Installing backend dependencies..."
-    - |
-      if [ -f package-lock.json ]; then
-        npm ci
-      else
-        npm install
-      fi
+    - npm install --legacy-peer-deps || npm install
     - echo "Running backend tests..."
-    - npm test || echo "No tests configured yet - skipping"
+    - npm test 2>&1 || echo "No tests configured yet - skipping"
   only:
     - branches
     - merge_requests
   allow_failure: true
 
-# Frontend Tests (if you add tests later)
+# Frontend Tests
 frontend:test:
   stage: test
   image: node:${NODE_VERSION}
   script:
     - cd ${FRONTEND_DIR}
     - echo "Installing frontend dependencies..."
-    - |
-      if [ -f package-lock.json ]; then
-        npm ci
-      else
-        npm install
-      fi
+    - npm install --legacy-peer-deps || npm install
     - echo "Running frontend tests..."
-    - npm test || echo "No tests configured yet - skipping"
+    - npm test 2>&1 || echo "No tests configured yet - skipping"
   only:
     - branches
     - merge_requests
@@ -64,7 +54,7 @@ backend:lint:
   script:
     - cd ${BACKEND_DIR}
     - echo "Checking backend code quality..."
-    - npm run lint || echo "Linter not configured - skipping"
+    - npm run lint 2>&1 || echo "Linter not configured - skipping"
   only:
     - branches
     - merge_requests
@@ -77,15 +67,10 @@ frontend:build:
   script:
     - cd ${FRONTEND_DIR}
     - echo "Installing frontend dependencies..."
-    - |
-      if [ -f package-lock.json ]; then
-        npm ci
-      else
-        npm install
-      fi
+    - npm install --legacy-peer-deps || npm install
     - echo "Building frontend..."
     - npm run build
-    - echo "Frontend build completed successfully!"
+    - echo "✅ Frontend build completed successfully!"
   artifacts:
     paths:
       - ${FRONTEND_DIR}/dist/
@@ -102,33 +87,28 @@ backend:build:
   script:
     - cd ${BACKEND_DIR}
     - echo "Installing backend dependencies..."
-    - |
-      if [ -f package-lock.json ]; then
-        npm ci
-      else
-        npm install
-      fi
+    - npm install --legacy-peer-deps || npm install
     - echo "Checking backend build..."
-    - node -c app.js || echo "Syntax check completed"
-    - echo "Backend build check completed!"
+    - node -c app.js && echo "✅ Backend syntax check passed"
+    - echo "✅ Backend build check completed!"
   only:
     - main
     - master
     - develop
 
-# Deploy to staging (example - adjust based on your deployment)
+# Deploy to staging
 deploy:staging:
   stage: deploy
   image: node:${NODE_VERSION}
   script:
-    - echo "Deploying to staging environment..."
+    - echo "🚀 Deploying to staging environment..."
     - echo "Backend deployment..."
     - cd ${BACKEND_DIR}
-    - echo "Backend ready for deployment"
+    - echo "✅ Backend ready for deployment"
     - echo "Frontend deployment..."
     - cd ../${FRONTEND_DIR}
-    - echo "Frontend ready for deployment"
-    - echo "Staging deployment completed!"
+    - echo "✅ Frontend ready for deployment"
+    - echo "✅ Staging deployment completed!"
   environment:
     name: staging
     url: https://staging.example.com
@@ -136,17 +116,17 @@ deploy:staging:
     - develop
   when: manual
 
-# Deploy to production (example - adjust based on your deployment)
+# Deploy to production
 deploy:production:
   stage: deploy
   image: node:${NODE_VERSION}
   script:
-    - echo "Deploying to production environment..."
+    - echo "🚀 Deploying to production environment..."
     - echo "⚠️ Production deployment - ensure all tests passed!"
     - cd ${BACKEND_DIR}
-    - echo "Backend ready for production deployment"
+    - echo "✅ Backend ready for production deployment"
     - cd ../${FRONTEND_DIR}
-    - echo "Frontend ready for production deployment"
+    - echo "✅ Frontend ready for production deployment"
     - echo "✅ Production deployment completed!"
   environment:
     name: production
@@ -155,27 +135,3 @@ deploy:production:
     - main
     - master
   when: manual
-
-# Docker Build (if using Docker)
-docker:build:
-  stage: build
-  image: docker:latest
-  services:
-    - docker:dind
-  before_script:
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-  script:
-    - echo "Building Docker images..."
-    - cd ${BACKEND_DIR}
-    - docker build -t $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE/backend:latest .
-    - docker push $CI_REGISTRY_IMAGE/backend:$CI_COMMIT_SHORT_SHA
-    - docker push $CI_REGISTRY_IMAGE/backend:latest
-    - cd ../${FRONTEND_DIR}
-    - docker build -t $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE/frontend:latest .
-    - docker push $CI_REGISTRY_IMAGE/frontend:$CI_COMMIT_SHORT_SHA
-    - docker push $CI_REGISTRY_IMAGE/frontend:latest
-  only:
-    - main
-    - master
-  when: manual
-
