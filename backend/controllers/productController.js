@@ -20,15 +20,18 @@ const extractPrimaryCategory = (categoriesString) => {
 // Get products - check database first, then fallback to API
 export const getProducts = async (req, res) => {
   try {
-    const { search, page = 1, category, filter, proteinMin, nutriscoreGrade, bestSeller } = req.query;
+    const { search, page = 1, category, filter, proteinFilter, popularityFilter, proteinMin, nutriscoreGrade, bestSeller, sort } = req.query;
     const pageSize = 24;
     const skip = (parseInt(page) - 1) * pageSize;
 
     // Build query - Show all products (remove status filter to show all products)
     let dbQuery = {};
+    let searchOrConditions = null;
+    let proteinOrConditions = null;
     
+    // Build search conditions
     if (search) {
-      dbQuery.$or = [
+      searchOrConditions = [
         { name: { $regex: search, $options: 'i' } },
         { brand: { $regex: search, $options: 'i' } },
         { barcode: { $regex: search, $options: 'i' } }
@@ -39,8 +42,41 @@ export const getProducts = async (req, res) => {
       dbQuery.category = { $regex: category, $options: 'i' };
     }
 
-    // Filter by protein (minimum protein content)
-    if (proteinMin) {
+    // Filter by protein level
+    if (proteinFilter) {
+      if (proteinFilter === 'high') {
+        dbQuery.protein = { $gte: 20 }; // High protein: ≥20g per 100g
+      } else if (proteinFilter === 'medium') {
+        dbQuery.protein = { $gte: 10, $lt: 20 }; // Medium protein: 10-19g per 100g
+      } else if (proteinFilter === 'low') {
+        proteinOrConditions = [
+          { protein: { $lt: 10 } },
+          { protein: null }
+        ];
+      }
+    }
+
+    // Handle multiple $or conditions (search + protein filter)
+    if (searchOrConditions || proteinOrConditions) {
+      const andConditions = [];
+      if (searchOrConditions) {
+        andConditions.push({ $or: searchOrConditions });
+      }
+      if (proteinOrConditions) {
+        andConditions.push({ $or: proteinOrConditions });
+      }
+      if (andConditions.length > 0) {
+        if (andConditions.length === 1) {
+          Object.assign(dbQuery, andConditions[0]);
+        } else {
+          dbQuery.$and = andConditions;
+        }
+      }
+    }
+
+    // Filter by protein (minimum protein content) - backward compatibility
+    // Only apply if proteinFilter is not set
+    if (proteinMin && !proteinFilter) {
       dbQuery.protein = { $gte: parseFloat(proteinMin) };
     }
 
@@ -54,7 +90,7 @@ export const getProducts = async (req, res) => {
       dbQuery.isBestSeller = true;
     }
 
-    // Additional filter type
+    // Additional filter type - backward compatibility
     if (filter === 'best-seller') {
       dbQuery.isBestSeller = true;
     } else if (filter === 'high-protein') {
@@ -82,13 +118,48 @@ export const getProducts = async (req, res) => {
       });
     }
 
+    // Determine sort order based on popularity filter or sort parameter
+    let sortOrder = { 
+      isBestSeller: -1, // Best sellers first
+      salesCount: -1, // Then by sales count
+      createdAt: -1 
+    };
+
+    if (sort || popularityFilter) {
+      const sortType = sort || popularityFilter;
+      switch (sortType) {
+        case 'most-liked':
+          sortOrder = { likesCount: -1, isBestSeller: -1, createdAt: -1 };
+          break;
+        case 'most-sold':
+          sortOrder = { salesCount: -1, isBestSeller: -1, likesCount: -1, createdAt: -1 };
+          break;
+        case 'best-seller':
+          sortOrder = { isBestSeller: -1, salesCount: -1, likesCount: -1, createdAt: -1 };
+          break;
+        case 'trending':
+          // Trending = recent sales + likes (products with sales in last 30 days)
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          sortOrder = { salesCount: -1, likesCount: -1, updatedAt: -1, createdAt: -1 };
+          break;
+        case 'high-protein':
+          sortOrder = { protein: -1, isBestSeller: -1, salesCount: -1 };
+          break;
+        case 'price-low':
+          sortOrder = { price: 1, createdAt: -1 };
+          break;
+        case 'price-high':
+          sortOrder = { price: -1, createdAt: -1 };
+          break;
+        default:
+          sortOrder = { isBestSeller: -1, salesCount: -1, createdAt: -1 };
+      }
+    }
+
     // First, try with the query
     let dbProducts = await Product.find(dbQuery)
-      .sort({ 
-        isBestSeller: -1, // Best sellers first
-        salesCount: -1, // Then by sales count
-        createdAt: -1 
-      })
+      .sort(sortOrder)
       .skip(skip)
       .limit(pageSize);
 

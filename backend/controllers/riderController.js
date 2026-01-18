@@ -2,7 +2,7 @@ import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import mongoose from 'mongoose';
 
-// Get all orders (Employee can view and manage orders)
+// Get all orders (Rider can view and manage orders)
 export const getAllOrders = async (req, res) => {
   try {
     const { status, page = 1, limit = 50 } = req.query;
@@ -14,7 +14,7 @@ export const getAllOrders = async (req, res) => {
     }
 
     const orders = await Order.find(query)
-      .populate('user', 'firstName lastName email')
+      .populate('user', 'firstName lastName email phone address city zipCode country')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -39,13 +39,13 @@ export const getAllOrders = async (req, res) => {
   }
 };
 
-// Update order status (Employee can update order status)
+// Update order status (Rider can update order status)
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
-    const validStatuses = ['pending', 'ordered', 'processing', 'shipped', 'delivered', 'cancelled'];
+    const validStatuses = ['pending', 'ordered', 'processing', 'out_for_delivery', 'shipped', 'delivered', 'cancelled'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         message: 'Invalid status. Must be one of: ' + validStatuses.join(', ')
@@ -100,7 +100,7 @@ export const getOrderById = async (req, res) => {
   }
 };
 
-// Get products (read-only for employees)
+// Get products (read-only for riders)
 export const getProducts = async (req, res) => {
   try {
     const { search, category, page = 1, limit = 50 } = req.query;
@@ -146,7 +146,7 @@ export const getProducts = async (req, res) => {
   }
 };
 
-// Get stock statistics (read-only for employees)
+// Get stock statistics (read-only for riders)
 export const getStockStats = async (req, res) => {
   try {
     const LOW_STOCK_THRESHOLD = 30;
@@ -190,5 +190,4 @@ export const getStockStats = async (req, res) => {
     });
   }
 };
-
 

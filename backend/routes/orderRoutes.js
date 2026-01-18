@@ -3,7 +3,9 @@ import {
   createOrder,
   getOrders,
   getOrderById,
-  cancelOrder
+  cancelOrder,
+  getReceipt,
+  downloadReceipt
 } from '../controllers/orderController.js';
 import { authenticate } from '../middleware/authMiddleware.js';
 
@@ -79,6 +81,49 @@ router.post('/', createOrder);
  *         description: Order cancelled
  */
 router.put('/:orderId/cancel', cancelOrder);
+
+/**
+ * @swagger
+ * /api/orders/{orderId}/receipt:
+ *   get:
+ *     summary: View receipt/invoice for order
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Receipt HTML
+ */
+router.get('/:orderId/receipt', (req, res, next) => {
+  console.log('📄 Receipt route matched:', req.params.orderId, 'URL:', req.url);
+  next();
+}, getReceipt);
+
+/**
+ * @swagger
+ * /api/orders/{orderId}/receipt/download:
+ *   get:
+ *     summary: Download receipt/invoice for order
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Receipt file download
+ */
+router.get('/:orderId/receipt/download', downloadReceipt);
 
 /**
  * @swagger

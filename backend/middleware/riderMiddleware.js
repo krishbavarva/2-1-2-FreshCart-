@@ -2,9 +2,9 @@ import User from '../models/User.js';
 import mongoose from 'mongoose';
 
 /**
- * Middleware to check if user is employee or higher (employee, manager, admin)
+ * Middleware to check if user is rider or higher (rider, manager, admin)
  */
-export const isEmployee = async (req, res, next) => {
+export const isRider = async (req, res, next) => {
   try {
     // Get user ID from request (set by authMiddleware)
     const userId = req.user?.id || req.userId;
@@ -33,23 +33,30 @@ export const isEmployee = async (req, res, next) => {
       });
     }
 
-    // Check if user is employee, manager, or admin
-    if (!['employee', 'manager', 'admin'].includes(userDoc.role)) {
+    // Check if user is rider, manager, or admin
+    // Also accept 'employee' for backward compatibility (will be migrated to 'rider')
+    if (!['rider', 'employee', 'manager', 'admin'].includes(userDoc.role)) {
       return res.status(403).json({
-        message: 'Access denied. Employee privileges or higher required.'
+        message: 'Access denied. Rider privileges or higher required.'
       });
+    }
+    
+    // Auto-migrate 'employee' to 'rider' if found
+    if (userDoc.role === 'employee') {
+      userDoc.role = 'rider';
+      await userDoc.save();
+      console.log(`✅ Auto-migrated user ${userDoc.email} from 'employee' to 'rider' role`);
     }
 
     // Attach user details to request
-    req.employeeUser = userDoc;
+    req.riderUser = userDoc;
     next();
   } catch (error) {
-    console.error('Employee middleware error:', error);
+    console.error('Rider middleware error:', error);
     res.status(500).json({
-      message: 'Error verifying employee access',
+      message: 'Error verifying rider access',
       error: error.message
     });
   }
 };
-
 

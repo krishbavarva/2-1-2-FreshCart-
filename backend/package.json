@@ -13,6 +13,8 @@
     "test:coverage": "nyc mocha tests/**/*.test.js --timeout 10000 --exit",
     "create-admin": "node scripts/createAdmin.js",
     "create-users": "node scripts/createUsers.js",
+    "migrate-rider": "node scripts/migrateEmployeeToRider.js",
+    "get-token": "node scripts/generateTestToken.js",
     "sync-products": "node scripts/syncProducts.js",
     "sync-products-all": "node scripts/syncProducts.js 200 100",
     "sync-products-large": "node scripts/syncProducts.js 500 100"
@@ -35,7 +37,9 @@
     "mongoose": "^9.0.1",
     "stripe": "^20.2.0",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "@googlemaps/google-maps-services-js": "^3.3.47",
+    "puppeteer": "^23.7.2"
   },
   "devDependencies": {
     "chai": "^6.2.1",

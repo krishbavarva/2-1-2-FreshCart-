@@ -52,7 +52,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['customer', 'employee', 'manager', 'admin'],
+    enum: ['customer', 'rider', 'manager', 'admin'],
     default: 'customer'
   },
   likedProducts: [{

@@ -76,11 +76,11 @@ const createUsers = async () => {
       console.log('   Email:', existingEmployee.email);
       console.log('   Role:', existingEmployee.role);
       
-      // Update role to employee if not already
-      if (existingEmployee.role !== 'employee') {
-        existingEmployee.role = 'employee';
+      // Update role to rider if not already
+      if (existingEmployee.role !== 'rider') {
+        existingEmployee.role = 'rider';
         await existingEmployee.save();
-        console.log('✅ Updated user role to employee');
+        console.log('✅ Updated user role to rider');
       }
       
       // Update password
@@ -98,7 +98,7 @@ const createUsers = async () => {
         lastName: 'Employee',
         email: employeeEmail,
         password: hashedEmployeePassword,
-        role: 'employee',
+        role: 'rider',
         phone: '0987654321',
         address: '456 Work Avenue',
         zipCode: '54321',
@@ -111,12 +111,12 @@ const createUsers = async () => {
       console.log('✅ Employee user created successfully!');
       console.log('   Email:', employeeEmail);
       console.log('   Password:', employeePassword);
-      console.log('   Role: employee\n');
+      console.log('   Role: rider\n');
     }
 
     console.log('📋 Summary:');
     console.log('   Customer: customer@gmail.com / 123456');
-    console.log('   Employee: employee@gmail.com / 123456');
+    console.log('   Rider: employee@gmail.com / 123456');
     console.log('\n✅ All users created/updated successfully!');
 
     await mongoose.disconnect();
@@ -129,4 +129,5 @@ const createUsers = async () => {
 };
 
 createUsers();
+
 

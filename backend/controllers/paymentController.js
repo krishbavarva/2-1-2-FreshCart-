@@ -2,6 +2,9 @@ import Stripe from 'stripe';
 import Order from '../models/Order.js';
 import Cart from '../models/Cart.js';
 import { isDBConnected } from '../config/database.js';
+import { calculateDistance } from '../services/googleMapsService.js';
+import { calculateDeliveryFee, isWithinDeliveryRange } from '../services/deliveryPricingService.js';
+import { STORE_CONFIG } from '../config/store.js';
 
 // Lazy initialization of Stripe - initialize on first use, not at module load time
 // This ensures dotenv.config() has already run before we try to access process.env
@@ -79,11 +82,50 @@ export const createPaymentIntent = async (req, res) => {
       });
     }
 
+    // Build full delivery address string
+    const fullDeliveryAddress = `${shippingAddress.address}, ${shippingAddress.city}, ${shippingAddress.zipCode}, ${shippingAddress.country}`;
+    
+    // Calculate distance from store to delivery address
+    console.log('📍 Calculating distance from store to delivery address...');
+    const distanceResult = await calculateDistance(fullDeliveryAddress);
+    
+    if (!distanceResult.success) {
+      return res.status(400).json({
+        message: distanceResult.error || 'Unable to calculate delivery distance. Please check your address.',
+        error: 'DISTANCE_CALCULATION_FAILED'
+      });
+    }
+
+    const distance = distanceResult.distance;
+    const estimatedDeliveryTime = distanceResult.duration;
+
+    // Validate distance is within 40km range
+    if (!isWithinDeliveryRange(distance)) {
+      return res.status(400).json({
+        message: `Delivery is only available within 40km of the store. Your address is ${distance.toFixed(2)}km away.`,
+        distance: distance,
+        maxDistance: 40,
+        error: 'OUT_OF_DELIVERY_RANGE'
+      });
+    }
+
+    // Calculate delivery fee based on distance
+    const deliveryFee = calculateDeliveryFee(distance);
+    
+    if (deliveryFee === null) {
+      return res.status(400).json({
+        message: 'Unable to calculate delivery fee. Distance exceeds maximum range.',
+        error: 'DELIVERY_FEE_CALCULATION_FAILED'
+      });
+    }
+
+    console.log(`✅ Distance: ${distance}km, Delivery Fee: €${deliveryFee.toFixed(2)}, Estimated Time: ${estimatedDeliveryTime} minutes`);
+
     // Calculate totals
     const subtotal = cart.totalPrice || 0;
     const tax = subtotal * 0.1; // 10% tax
-    const shipping = subtotal > 50 ? 0 : 5.99;
-    const total = subtotal + tax + shipping;
+    const deliveryCost = deliveryFee; // Use distance-based delivery fee from Google Maps
+    const total = subtotal + tax + deliveryCost;
 
     // Convert to cents (Stripe uses smallest currency unit)
     const amountInCents = Math.round(total * 100);
@@ -127,7 +169,12 @@ export const createPaymentIntent = async (req, res) => {
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
       amount: total,
-      currency: 'eur'
+      currency: 'eur',
+      deliveryInfo: {
+        distance: distance,
+        deliveryFee: deliveryFee,
+        estimatedDeliveryTime: estimatedDeliveryTime
+      }
     });
   } catch (error) {
     console.error('❌ Error creating payment intent:', error);
@@ -242,11 +289,51 @@ export const confirmPayment = async (req, res) => {
       });
     }
 
+    // Build full delivery address string
+    const fullDeliveryAddress = `${shippingAddress.address}, ${shippingAddress.city}, ${shippingAddress.zipCode}, ${shippingAddress.country}`;
+    
+    // Calculate distance from store to delivery address
+    console.log('📍 Calculating distance for order creation...');
+    const distanceResult = await calculateDistance(fullDeliveryAddress);
+    
+    if (!distanceResult.success) {
+      return res.status(400).json({
+        message: distanceResult.error || 'Unable to calculate delivery distance. Please check your address.',
+        error: 'DISTANCE_CALCULATION_FAILED'
+      });
+    }
+
+    const distance = distanceResult.distance;
+    const estimatedDeliveryTime = distanceResult.duration;
+
+    // Validate distance is within 40km range
+    if (!isWithinDeliveryRange(distance)) {
+      return res.status(400).json({
+        message: `Delivery is only available within 40km of the store. Your address is ${distance.toFixed(2)}km away.`,
+        distance: distance,
+        maxDistance: 40,
+        error: 'OUT_OF_DELIVERY_RANGE'
+      });
+    }
+
+    // Calculate delivery fee based on distance
+    const deliveryFee = calculateDeliveryFee(distance);
+    
+    if (deliveryFee === null) {
+      return res.status(400).json({
+        message: 'Unable to calculate delivery fee. Distance exceeds maximum range.',
+        error: 'DELIVERY_FEE_CALCULATION_FAILED'
+      });
+    }
+
+    console.log(`✅ Distance: ${distance}km, Delivery Fee: €${deliveryFee.toFixed(2)}, Estimated Time: ${estimatedDeliveryTime} minutes`);
+
     // Calculate totals (should match payment intent amount)
+    // Delivery cost is calculated based on distance from Google Maps
     const subtotal = cart.totalPrice || 0;
     const tax = subtotal * 0.1;
-    const shipping = subtotal > 50 ? 0 : 5.99;
-    const total = subtotal + tax + shipping;
+    const deliveryCost = deliveryFee; // Use distance-based delivery fee from Google Maps
+    const total = subtotal + tax + deliveryCost;
 
     // Verify amount matches
     const amountInCents = Math.round(total * 100);
@@ -269,7 +356,7 @@ export const confirmPayment = async (req, res) => {
     }));
 
     console.log('📦 Creating order with items:', orderItems.length);
-    console.log('   Order totals:', { subtotal, tax, shipping, total });
+    console.log('   Order totals:', { subtotal, tax, deliveryCost, total });
 
     // Generate order number (required field, must be set before validation)
     // Format: ORD-timestamp-random (e.g., ORD-1234567890-456)
@@ -288,16 +375,26 @@ export const confirmPayment = async (req, res) => {
         items: orderItems,
         subtotal,
         tax,
-        shipping,
+        shipping: deliveryFee, // Store delivery fee in shipping field for backward compatibility
         total,
         shippingAddress: shippingAddress,
+        deliveryDistance: distance,
+        deliveryFee: deliveryFee,
+        estimatedDeliveryTime: estimatedDeliveryTime,
+        storeAddress: {
+          street: STORE_CONFIG.address.street,
+          city: STORE_CONFIG.address.city,
+          zipCode: STORE_CONFIG.address.zipCode,
+          country: STORE_CONFIG.address.country,
+          fullAddress: STORE_CONFIG.address.fullAddress
+        },
         paymentMethod,
         paymentStatus: 'paid',
         paymentIntentId: paymentIntentId,
         stripePaymentId: paymentIntent.id,
-        status: 'processing'
+        status: 'ordered'
       });
-      console.log('✅ Order created - orderNumber:', order.orderNumber);
+      console.log('✅ Order created - orderNumber:', order.orderNumber, 'status:', order.status);
     } catch (orderError) {
       console.error('❌ Error in Order.create():', orderError);
       console.error('   Error type:', orderError.constructor.name);
@@ -323,6 +420,8 @@ export const confirmPayment = async (req, res) => {
     await order.populate('user', 'firstName lastName email');
 
     console.log('✅ Order created successfully:', order.orderNumber);
+    console.log('📋 Order status:', order.status);
+    console.log('📋 Order paymentStatus:', order.paymentStatus);
 
     res.status(201).json({
       message: 'Order created successfully',

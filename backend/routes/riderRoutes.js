@@ -1,26 +1,26 @@
 import express from 'express';
 import { authenticate } from '../middleware/authMiddleware.js';
-import { isEmployee } from '../middleware/employeeMiddleware.js';
+import { isRider } from '../middleware/riderMiddleware.js';
 import {
   getAllOrders,
   getOrderById,
   updateOrderStatus,
   getProducts,
   getStockStats
-} from '../controllers/employeeController.js';
+} from '../controllers/riderController.js';
 
 const router = express.Router();
 
-// All employee routes require authentication and employee role or higher
+// All rider routes require authentication and rider role or higher
 router.use(authenticate);
-router.use(isEmployee);
+router.use(isRider);
 
 /**
  * @swagger
- * /api/employee/orders:
+ * /api/rider/orders:
  *   get:
- *     summary: Get all orders (Employee)
- *     tags: [Employee]
+ *     summary: Get all orders (Rider)
+ *     tags: [Rider]
  *     security:
  *       - bearerAuth: []
  */
@@ -28,10 +28,10 @@ router.get('/orders', getAllOrders);
 
 /**
  * @swagger
- * /api/employee/orders/{id}:
+ * /api/rider/orders/{id}:
  *   get:
- *     summary: Get order by ID (Employee)
- *     tags: [Employee]
+ *     summary: Get order by ID (Rider)
+ *     tags: [Rider]
  *     security:
  *       - bearerAuth: []
  */
@@ -39,10 +39,10 @@ router.get('/orders/:id', getOrderById);
 
 /**
  * @swagger
- * /api/employee/orders/{id}/status:
+ * /api/rider/orders/{id}/status:
  *   put:
- *     summary: Update order status (Employee)
- *     tags: [Employee]
+ *     summary: Update order status (Rider)
+ *     tags: [Rider]
  *     security:
  *       - bearerAuth: []
  */
@@ -50,10 +50,10 @@ router.put('/orders/:id/status', updateOrderStatus);
 
 /**
  * @swagger
- * /api/employee/products:
+ * /api/rider/products:
  *   get:
- *     summary: Get products (read-only) (Employee)
- *     tags: [Employee]
+ *     summary: Get products (read-only) (Rider)
+ *     tags: [Rider]
  *     security:
  *       - bearerAuth: []
  */
@@ -61,15 +61,14 @@ router.get('/products', getProducts);
 
 /**
  * @swagger
- * /api/employee/statistics:
+ * /api/rider/statistics:
  *   get:
- *     summary: Get stock statistics (read-only) (Employee)
- *     tags: [Employee]
+ *     summary: Get stock statistics (read-only) (Rider)
+ *     tags: [Rider]
  *     security:
  *       - bearerAuth: []
  */
 router.get('/statistics', getStockStats);
 
 export default router;
-
 

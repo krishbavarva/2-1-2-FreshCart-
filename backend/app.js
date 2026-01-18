@@ -19,7 +19,7 @@ import orderRoutes from './routes/orderRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import customerRoutes from './routes/customerRoutes.js';
-import employeeRoutes from './routes/employeeRoutes.js';
+import riderRoutes from './routes/riderRoutes.js';
 import managerRoutes from './routes/managerRoutes.js';
 
 // Debug: Log Stripe key status after loading .env
@@ -150,7 +150,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/customer', customerRoutes);
-app.use('/api/employee', employeeRoutes);
+app.use('/api/rider', riderRoutes);
 app.use('/api/manager', managerRoutes);
 
 // Log payment routes registration
@@ -165,7 +165,7 @@ const registeredRoutes = [
   { path: '/api/payment', name: 'Payment System' },
   { path: '/api/admin', name: 'Admin Panel' },
   { path: '/api/customer', name: 'Customer Dashboard' },
-  { path: '/api/employee', name: 'Employee Dashboard' },
+  { path: '/api/rider', name: 'Rider Dashboard' },
   { path: '/api/manager', name: 'Manager Dashboard' }
 ];
 

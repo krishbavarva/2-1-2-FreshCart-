@@ -56,6 +56,25 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  deliveryDistance: {
+    type: Number,
+    default: null
+  },
+  deliveryFee: {
+    type: Number,
+    default: 0
+  },
+  estimatedDeliveryTime: {
+    type: Number,
+    default: null
+  },
+  storeAddress: {
+    street: String,
+    city: String,
+    zipCode: String,
+    country: String,
+    fullAddress: String
+  },
   total: {
     type: Number,
     required: true
@@ -71,7 +90,7 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+    enum: ['pending', 'ordered', 'processing', 'out_for_delivery', 'shipped', 'delivered', 'cancelled'],
     default: 'pending'
   },
   paymentMethod: {

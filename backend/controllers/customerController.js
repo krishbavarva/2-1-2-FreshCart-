@@ -16,6 +16,8 @@ export const getCustomerKPIs = async (req, res) => {
         totalOrders: 0,
         totalSpent: 0,
         totalItemsPurchased: 0,
+        deliveredItemsCount: 0,
+        deliveredOrdersSpend: 0,
         orderFrequency: 0,
         averageOrderValue: 0,
         favoriteCategories: [],
@@ -23,13 +25,24 @@ export const getCustomerKPIs = async (req, res) => {
       });
     }
 
-    // Calculate total orders
+    // Filter delivered orders
+    const deliveredOrders = orders.filter(order => order.status === 'delivered');
+
+    // Calculate total orders (all orders)
     const totalOrders = orders.length;
 
-    // Calculate total spent
+    // Calculate total spent (all orders) - keeping for average calculation
     const totalSpent = orders.reduce((sum, order) => sum + (order.total || 0), 0);
 
-    // Calculate total items purchased
+    // Calculate delivered orders spend (only delivered orders)
+    const deliveredOrdersSpend = deliveredOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+
+    // Calculate delivered items count (only delivered orders)
+    const deliveredItemsCount = deliveredOrders.reduce((sum, order) => {
+      return sum + order.items.reduce((itemSum, item) => itemSum + (item.quantity || 0), 0);
+    }, 0);
+
+    // Calculate total items purchased (all orders) - keeping for backward compatibility
     const totalItemsPurchased = orders.reduce((sum, order) => {
       return sum + order.items.reduce((itemSum, item) => itemSum + (item.quantity || 0), 0);
     }, 0);
@@ -83,6 +96,8 @@ export const getCustomerKPIs = async (req, res) => {
       totalOrders,
       totalSpent: parseFloat(totalSpent.toFixed(2)),
       totalItemsPurchased,
+      deliveredItemsCount,
+      deliveredOrdersSpend: parseFloat(deliveredOrdersSpend.toFixed(2)),
       orderFrequency: parseFloat(orderFrequency),
       averageOrderValue: parseFloat(averageOrderValue.toFixed(2)),
       favoriteCategories,

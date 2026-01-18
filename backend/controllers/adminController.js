@@ -440,9 +440,9 @@ export const createUser = async (req, res) => {
     }
 
     // Validate role
-    if (role && !['customer', 'employee', 'manager', 'admin'].includes(role)) {
+    if (role && !['customer', 'rider', 'manager', 'admin'].includes(role)) {
       return res.status(400).json({
-        message: 'Invalid role. Must be customer, employee, manager, or admin'
+        message: 'Invalid role. Must be customer, rider, manager, or admin'
       });
     }
 
@@ -521,12 +521,12 @@ export const getAllUsers = async (req, res) => {
 
     const query = {};
 
-    // Filter to show only employees and managers by default
-    if (!role || role === 'all') {
-      query.role = { $in: ['employee', 'manager'] };
-    } else if (role !== 'all') {
+    // Admin can see all users (customers, employees, managers)
+    // Only filter by role if a specific role is requested
+    if (role && role !== 'all') {
       query.role = role;
     }
+    // If no role filter or 'all', show all users (don't filter by role)
 
     if (search) {
       query.$or = [
@@ -569,9 +569,9 @@ export const updateUserRole = async (req, res) => {
     const { role } = req.body;
 
     // Validate role
-    if (!role || !['employee', 'manager'].includes(role)) {
+    if (!role || !['rider', 'manager'].includes(role)) {
       return res.status(400).json({
-        message: 'Invalid role. Must be employee or manager'
+        message: 'Invalid role. Must be rider or manager'
       });
     }
 
@@ -645,10 +645,10 @@ export const deleteUser = async (req, res) => {
       });
     }
 
-    // Only allow deleting employees and managers
-    if (!['employee', 'manager'].includes(user.role)) {
+    // Only allow deleting riders and managers
+    if (!['rider', 'manager'].includes(user.role)) {
       return res.status(403).json({
-        message: 'Can only delete employees and managers'
+        message: 'Can only delete riders and managers'
       });
     }
 
