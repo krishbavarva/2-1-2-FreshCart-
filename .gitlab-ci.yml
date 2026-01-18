@@ -126,14 +126,9 @@ deploy:production:
   script:
     - echo "🚀 GitHub Deployment Ready!"
     - echo "📝 This project uses GitHub Actions for deployment"
-    - echo "✅ To deploy to GitHub Pages:"
-    - echo "   1. Push to GitHub: git push github main"
-    - echo "   2. GitHub Actions will automatically:"
-    - echo "      - Run all tests"
-    - echo "      - Build frontend"
-    - echo "      - Deploy to GitHub Pages"
-    - echo "🌐 Your site will be live at:"
-    - echo "   https://yourusername.github.io/your-repo-name/"
+    - echo "✅ To deploy: Push to GitHub: git push github main"
+    - echo "✅ GitHub Actions will run tests, build frontend, and deploy to GitHub Pages"
+    - echo "🌐 Your site will be live at: https://yourusername.github.io/your-repo-name/"
     - echo "📋 See GITHUB_DEPLOYMENT.md for detailed instructions"
   environment:
     name: production
@@ -221,14 +216,9 @@ deploy:github:info:
     - echo "📝 Your project is configured for GitHub deployment!"
     - echo "✅ Auto-sync enabled: Code pushed to GitLab will auto-sync to GitHub"
     - echo "✅ GitHub Actions CI/CD is set up in .github/workflows/"
-    - echo "   - ci-cd.yml: Runs tests and builds"
-    - echo "   - pages.yml: Deploys frontend to GitHub Pages"
-    - echo "📋 Setup GitHub sync:"
-    - echo "   1. Go to GitLab: Settings → CI/CD → Variables"
-    - echo "   2. Add variable: GITHUB_REPO_URL = https://github.com/username/repo.git"
-    - echo "   3. Add variable: GITHUB_SSH_PRIVATE_KEY = (your GitHub SSH private key)"
+    - echo "📋 Setup GitHub sync: Go to GitLab Settings → CI/CD → Variables"
+    - echo "📋 Add GITHUB_REPO_URL and GITHUB_SSH_PRIVATE_KEY variables"
     - echo "🌐 After sync, GitHub Actions will deploy automatically!"
-    - echo "   Frontend: https://yourusername.github.io/your-repo-name/"
   only:
     - main
     - master
