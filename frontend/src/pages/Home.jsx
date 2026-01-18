@@ -24,7 +24,7 @@ const Home = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-50 via-purple-50 to-pink-50 overflow-hidden relative">
+    <div className="min-h-screen bg-white overflow-hidden relative">
       {/* Animated Background Pattern */}
       <div className="fixed inset-0 z-0 opacity-30">
         <div className="absolute top-0 left-0 w-full h-full" style={{
@@ -134,9 +134,7 @@ const Home = () => {
       </div>
 
       {/* Category Section */}
-      <div className="py-20 relative overflow-hidden z-10" style={{
-        background: 'linear-gradient(180deg, #1e6b47 0%, #2d7a52 50%, #1a5f3f 100%)'
-      }}>
+      <div className="py-20 relative overflow-hidden z-10 bg-white">
         {/* Natural Background Pattern */}
         <div className="absolute inset-0 opacity-5">
           <div className="absolute top-10 left-10 w-64 h-64 bg-blue-300 rounded-full blur-3xl animate-blob"></div>
@@ -145,7 +143,7 @@ const Home = () => {
         </div>
         <div className="container mx-auto px-4 relative z-10">
           <div className={`text-left mb-12 transform transition-all duration-1000 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-            <h2 className="text-6xl md:text-7xl font-black text-white mb-4">
+            <h2 className="text-6xl md:text-7xl font-black text-gray-900 mb-4">
               CATEGORY
             </h2>
             <div className="w-24 h-1" style={{
@@ -195,16 +193,13 @@ const Home = () => {
                   {/* Category Name */}
                   <div className="mt-4 text-center">
                     <h3 
-                      className="text-lg font-bold text-white transition-all duration-300"
-                      style={{
-                        textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
-                      }}
+                      className="text-lg font-bold text-gray-900 transition-all duration-300"
                       onMouseEnter={(e) => {
-                        e.target.style.color = '#f97316';
+                        e.target.style.color = '#2563eb';
                         e.target.style.transform = 'scale(1.05)';
                       }}
                       onMouseLeave={(e) => {
-                        e.target.style.color = 'white';
+                        e.target.style.color = '#111827';
                         e.target.style.transform = 'scale(1)';
                       }}
                     >
@@ -248,9 +243,7 @@ const Home = () => {
       </div>
 
       {/* Features Section with Glassmorphism */}
-      <div className="relative py-20 overflow-hidden z-10" style={{
-        background: 'linear-gradient(180deg, #1a5f3f 0%, #1e6b47 50%, #2d7a52 100%)'
-      }}>
+      <div className="relative py-20 overflow-hidden z-10 bg-white">
         {/* Animated Background */}
         <div className="absolute inset-0">
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
@@ -261,8 +254,8 @@ const Home = () => {
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
-          <h2 className="text-5xl font-black text-center mb-16 text-white">
-            WHY CHOOSE <span style={{ color: '#f97316' }}>FRESHCART</span>?
+          <h2 className="text-5xl font-black text-center mb-16 text-gray-900">
+            WHY CHOOSE <span className="text-blue-600">FRESHCART</span>?
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
@@ -272,10 +265,8 @@ const Home = () => {
             ].map((feature, index) => (
               <div
                 key={feature.title}
-                className="backdrop-blur-lg rounded-3xl shadow-xl p-8 text-center hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-4 hover:rotate-1 border-2 hover:border-opacity-100"
+                className="bg-white rounded-3xl shadow-xl p-8 text-center hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-4 hover:rotate-1 border-2 border-gray-200 hover:border-blue-500"
                 style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  borderColor: 'rgba(249, 115, 22, 0.3)',
                   transitionDelay: `${index * 150}ms`,
                   transform: isVisible ? 'translateY(0)' : 'translateY(40px)',
                   opacity: isVisible ? 1 : 0
@@ -284,8 +275,8 @@ const Home = () => {
                 <div className={`w-24 h-24 bg-gradient-to-br ${feature.color} rounded-2xl flex items-center justify-center mx-auto mb-6 text-5xl shadow-lg transform group-hover:scale-110 group-hover:rotate-12 transition-all duration-500`}>
                   {feature.icon}
                 </div>
-                <h3 className="text-2xl font-bold mb-4 text-white">{feature.title}</h3>
-                <p className="text-white/80 leading-relaxed">{feature.desc}</p>
+                <h3 className="text-2xl font-bold mb-4 text-gray-900">{feature.title}</h3>
+                <p className="text-gray-700 leading-relaxed">{feature.desc}</p>
               </div>
             ))}
           </div>
@@ -293,9 +284,7 @@ const Home = () => {
       </div>
 
       {/* CTA Section */}
-      <div className="relative py-24 overflow-hidden" style={{
-        background: 'linear-gradient(135deg, #1a5f3f 0%, #1e6b47 100%)'
-      }}>
+      <div className="relative py-24 overflow-hidden bg-white">
         <div className="absolute inset-0">
           <div 
             className="absolute top-0 left-0 w-full h-full opacity-20"
@@ -306,10 +295,10 @@ const Home = () => {
         </div>
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-5xl md:text-6xl font-black text-white mb-6 animate-pulse-slow">
+            <h2 className="text-5xl md:text-6xl font-black text-gray-900 mb-6">
               SHOP SMART, LIVE HEALTHY
             </h2>
-            <p className="text-xl text-white/90 mb-10 leading-relaxed">
+            <p className="text-xl text-gray-700 mb-10 leading-relaxed">
               Discover products with complete nutritional information, track your purchase history, 
               and enjoy a seamless shopping experience from cart to checkout.
             </p>

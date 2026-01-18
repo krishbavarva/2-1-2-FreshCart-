@@ -57,3 +57,8 @@ export const getProductByBarcode = async (barcode) => {
   return response.data;
 };
 
+export const getLikedProducts = async () => {
+  const response = await api.get('/liked');
+  return response.data;
+};
+

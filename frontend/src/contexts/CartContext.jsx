@@ -132,13 +132,31 @@ export const CartProvider = ({ children }) => {
   };
 
   const updateQuantity = async (itemId, quantity) => {
+    if (!currentUser) {
+      toast.error('Please login to update cart');
+      return;
+    }
+
     try {
-      const data = await cartService.updateCartItem(itemId, quantity);
+      console.log('🛒 Updating quantity:', { itemId, quantity, itemIdType: typeof itemId });
+      
+      // Clean itemId - ensure it's a valid string
+      const cleanItemId = String(itemId || '').trim();
+      
+      if (!cleanItemId) {
+        toast.error('Invalid item ID');
+        return;
+      }
+      
+      const data = await cartService.updateCartItem(cleanItemId, quantity);
       setCart(data.cart);
       setItemCount(data.itemCount || 0);
     } catch (error) {
-      console.error('Error updating cart:', error);
-      toast.error('Failed to update cart');
+      console.error('❌ Error updating cart:', error);
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Failed to update cart';
+      toast.error(errorMessage);
     }
   };
 

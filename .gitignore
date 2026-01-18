@@ -37,3 +37,7 @@ pdf-forge-exports/
 # Package locks (optional)
 # package-lock.json
 
+# GitLab CI/CD
+.gitlab-ci-local/
+*.gitlab-ci-local.yml
+

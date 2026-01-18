@@ -54,7 +54,7 @@ const OrderHistory = () => {
 
   if (loading && orders.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
           <p className="mt-6 text-gray-600 text-lg font-medium">Loading orders...</p>
@@ -64,45 +64,33 @@ const OrderHistory = () => {
   }
 
   return (
-    <div className="min-h-screen py-8 px-4 relative" style={{
-      background: 'linear-gradient(135deg, #1a5f3f 0%, #2d7a52 25%, #1e6b47 50%, #2d7a52 75%, #1a5f3f 100%)'
-    }}>
+    <div className="min-h-screen py-8 px-4 relative bg-white">
       <div className="container mx-auto max-w-6xl relative z-10">
-        <h1 className="text-4xl font-bold text-white mb-8">Order History</h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-8">Order History</h1>
 
         {orders.length === 0 ? (
-          <div className="rounded-2xl shadow-lg p-12 text-center" style={{
-            background: 'linear-gradient(135deg, #2d7a52 0%, #1e6b47 50%, #1a5f3f 100%)',
-            border: '2px solid rgba(249, 115, 22, 0.4)',
-            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)'
-          }}>
-            <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6" style={{
-              background: 'rgba(255, 255, 255, 0.1)'
-            }}>
-              <svg className="w-12 h-12 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="rounded-2xl shadow-xl p-12 text-center bg-white border-2 border-gray-200">
+            <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 bg-gray-100">
+              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <h2 className="text-3xl font-bold text-white mb-4">No orders yet</h2>
-            <p className="text-white/70 mb-8">Your order history will appear here</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">No orders yet</h2>
+            <p className="text-gray-600 mb-8">Your order history will appear here</p>
           </div>
         ) : (
           <div className="space-y-6">
             {orders.map((order) => (
-              <div key={order._id} className="rounded-2xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1" style={{
-                background: 'linear-gradient(135deg, #2d7a52 0%, #1e6b47 50%, #1a5f3f 100%)',
-                border: '2px solid rgba(249, 115, 22, 0.4)',
-                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.4)'
-              }}>
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 pb-4 border-b">
+              <div key={order._id} className="rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 bg-white border-2 border-gray-200">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 pb-4 border-b border-gray-300">
                   <div>
                     <div className="flex items-center gap-4 mb-2">
-                      <h3 className="text-xl font-bold text-white">Order #{order.orderNumber}</h3>
+                      <h3 className="text-xl font-bold text-gray-900">Order #{order.orderNumber}</h3>
                       <span className={`px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm ${getStatusColor(order.status)}`}>
                         {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                       </span>
                     </div>
-                    <p className="text-sm text-white/70">
+                    <p className="text-sm text-gray-600">
                       Placed on {new Date(order.createdAt).toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'long',
@@ -113,7 +101,7 @@ const OrderHistory = () => {
                     </p>
                   </div>
                   <div className="mt-4 md:mt-0 text-right">
-                    <p className="text-2xl font-bold" style={{ color: '#f97316' }}>${order.total.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-blue-600">€{order.total.toFixed(2)}</p>
                     {order.status !== 'delivered' && order.status !== 'cancelled' && (
                       <button
                         onClick={() => handleCancelOrder(order._id)}
@@ -126,16 +114,11 @@ const OrderHistory = () => {
                 </div>
 
                 <div className="mb-4">
-                  <h4 className="font-semibold text-white mb-3">Items ({order.items.length})</h4>
+                  <h4 className="font-semibold text-gray-900 mb-3">Items ({order.items.length})</h4>
                   <div className="space-y-3">
                     {order.items.map((item, index) => (
-                      <div key={index} className="flex gap-4 p-4 rounded-xl transition-all duration-200" style={{
-                        background: 'rgba(26, 95, 63, 0.6)',
-                        border: '1px solid rgba(249, 115, 22, 0.2)'
-                      }}>
-                        <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 shadow-md" style={{
-                          background: 'linear-gradient(135deg, #1a5f3f 0%, #1e6b47 100%)'
-                        }}>
+                      <div key={index} className="flex gap-4 p-4 rounded-xl transition-all duration-200 bg-gray-50 border border-gray-200">
+                        <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 shadow-md bg-white">
                           {item.image ? (
                             <img
                               src={item.image}
@@ -152,14 +135,14 @@ const OrderHistory = () => {
                           )}
                         </div>
                         <div className="flex-1">
-                          <h5 className="font-medium text-white">{item.name}</h5>
+                          <h5 className="font-medium text-gray-900">{item.name}</h5>
                           {item.brand && (
-                            <p className="text-sm text-white/60">{item.brand}</p>
+                            <p className="text-sm text-gray-600">{item.brand}</p>
                           )}
-                          <p className="text-sm text-white/70">Quantity: {item.quantity}</p>
+                          <p className="text-sm text-gray-700">Quantity: {item.quantity}</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-white">${(item.price * item.quantity).toFixed(2)}</p>
+                          <p className="font-semibold text-gray-900">€{(item.price * item.quantity).toFixed(2)}</p>
                         </div>
                       </div>
                     ))}
@@ -167,11 +150,9 @@ const OrderHistory = () => {
                 </div>
 
                 {order.shippingAddress && Object.keys(order.shippingAddress).length > 0 && (
-                  <div className="pt-4" style={{
-                    borderTop: '1px solid rgba(249, 115, 22, 0.2)'
-                  }}>
-                    <h4 className="font-semibold text-white mb-2">Shipping Address</h4>
-                    <p className="text-sm text-white/70">
+                  <div className="pt-4 border-t border-gray-300">
+                    <h4 className="font-semibold text-gray-900 mb-2">Shipping Address</h4>
+                    <p className="text-sm text-gray-700">
                       {order.shippingAddress.firstName} {order.shippingAddress.lastName}<br />
                       {order.shippingAddress.address}<br />
                       {order.shippingAddress.city}, {order.shippingAddress.zipCode}<br />
@@ -180,20 +161,18 @@ const OrderHistory = () => {
                   </div>
                 )}
 
-                <div className="mt-4 pt-4 flex justify-between text-sm" style={{
-                  borderTop: '1px solid rgba(249, 115, 22, 0.2)'
-                }}>
+                <div className="mt-4 pt-4 flex justify-between text-sm border-t border-gray-300">
                   <div>
-                    <span className="text-white/70">Subtotal: </span>
-                    <span className="font-medium text-white">${order.subtotal.toFixed(2)}</span>
+                    <span className="text-gray-600">Subtotal: </span>
+                    <span className="font-medium text-gray-900">€{order.subtotal.toFixed(2)}</span>
                   </div>
                   <div>
-                    <span className="text-white/70">Tax: </span>
-                    <span className="font-medium text-white">${order.tax.toFixed(2)}</span>
+                    <span className="text-gray-600">Tax: </span>
+                    <span className="font-medium text-gray-900">€{order.tax.toFixed(2)}</span>
                   </div>
                   <div>
-                    <span className="text-white/70">Shipping: </span>
-                    <span className="font-medium" style={{ color: order.shipping === 0 ? '#f97316' : 'white' }}>{order.shipping === 0 ? 'FREE' : `$${order.shipping.toFixed(2)}`}</span>
+                    <span className="text-gray-600">Shipping: </span>
+                    <span className="font-medium text-green-600">{order.shipping === 0 ? 'FREE' : `€${order.shipping.toFixed(2)}`}</span>
                   </div>
                 </div>
               </div>

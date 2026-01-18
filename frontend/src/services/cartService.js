@@ -70,13 +70,24 @@ export const updateCartItem = async (itemId, quantity) => {
     if (!itemId) {
       throw new Error('Item ID is required');
     }
+    
+    // Clean itemId - remove any trailing colons or invalid characters
+    const cleanItemId = String(itemId).replace(/[:\s]+$/g, '').trim();
+    
     if (!quantity || quantity < 1) {
       throw new Error('Quantity must be at least 1');
     }
-    const response = await api.put(`/item/${itemId}`, { quantity });
+    
+    // Ensure the URL is correct - must be /item/:itemId
+    const url = `/item/${cleanItemId}`;
+    console.log('🛒 Updating cart item:', { itemId: cleanItemId, quantity, url, fullUrl: `${API_URL}${url}` });
+    
+    const response = await api.put(url, { quantity });
     return response.data;
   } catch (error) {
-    console.error('Error updating cart item:', error);
+    console.error('❌ Error updating cart item:', error);
+    console.error('   Request URL:', error.config?.url);
+    console.error('   Full URL:', error.config?.url ? `${API_URL}${error.config.url}` : 'N/A');
     throw error;
   }
 };

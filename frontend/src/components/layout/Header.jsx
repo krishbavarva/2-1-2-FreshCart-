@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
+import { useLikedProducts } from '../../contexts/LikedProductsContext';
 import { isAdmin, isEmployee, isManager, getUserRole } from '../../utils/authHelpers';
 
 const Header = () => {
   const { currentUser, logout } = useAuth();
   const { itemCount } = useCart();
+  const { likedProductsCount } = useLikedProducts();
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -63,6 +65,13 @@ const Header = () => {
                   Products
                   <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all duration-300"></span>
                 </Link>
+                <Link 
+                  to="/protein-plan" 
+                  className="text-white hover:text-orange-400 font-semibold transition-all duration-200 relative group"
+                >
+                  🤖 Protein Plan
+                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all duration-300"></span>
+                </Link>
                 {/* Role-based dashboard link */}
                 {userIsCustomer && (
                   <Link 
@@ -108,6 +117,22 @@ const Header = () => {
                   Orders
                   <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all duration-300"></span>
                 </Link>
+                {/* Liked Products - for all authenticated users */}
+                {currentUser && (
+                  <Link 
+                    to="/liked-products" 
+                    className="relative text-white hover:text-orange-400 transition-all duration-200 p-2 hover:bg-white/10 rounded-lg group"
+                  >
+                    <svg className="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    {likedProductsCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-gradient-to-r from-pink-500 to-pink-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg animate-pulse">
+                        {likedProductsCount > 9 ? '9+' : likedProductsCount}
+                      </span>
+                    )}
+                  </Link>
+                )}
                 {/* Cart - only for customers */}
                 {userIsCustomer && (
                   <Link 
@@ -196,6 +221,13 @@ const Header = () => {
                   >
                     Products
                   </Link>
+                  <Link 
+                    to="/protein-plan" 
+                    className="text-gray-700 hover:text-blue-600 font-semibold px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    🤖 Protein Plan
+                  </Link>
                   {/* Role-based dashboard links */}
                   {userIsCustomer && (
                     <Link 
@@ -240,6 +272,21 @@ const Header = () => {
                   >
                     Orders
                   </Link>
+                  {/* Liked Products - for all authenticated users */}
+                  {currentUser && (
+                    <Link 
+                      to="/liked-products" 
+                      className="text-gray-700 hover:text-pink-600 font-semibold px-4 py-2 rounded-lg hover:bg-pink-50 transition-colors flex items-center gap-2"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <span>Liked Products</span>
+                      {likedProductsCount > 0 && (
+                        <span className="bg-pink-500 text-white text-xs font-bold rounded-full px-2 py-1">
+                          {likedProductsCount}
+                        </span>
+                      )}
+                    </Link>
+                  )}
                   {/* Cart - only for customers */}
                   {userIsCustomer && (
                     <Link 

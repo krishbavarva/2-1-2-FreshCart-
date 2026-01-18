@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
+import { LikedProductsProvider } from './contexts/LikedProductsContext';
 import Layout from './components/layout/Layout';
 import Home from './pages/Home';
 import Login from './pages/auth/Login';
@@ -9,6 +10,8 @@ import Register from './pages/auth/Register';
 import Products from './pages/Products';
 import Cart from './pages/Cart';
 import OrderHistory from './pages/OrderHistory';
+import LikedProducts from './pages/LikedProducts';
+import ProteinPlanBot from './pages/ProteinPlanBot';
 import CustomerDashboard from './pages/CustomerDashboard';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
@@ -36,7 +39,8 @@ function App() {
       >
         <AuthProvider>
           <CartProvider>
-            <Layout>
+            <LikedProductsProvider>
+              <Layout>
               <ErrorBoundary>
                 <Routes>
                   <Route path="/" element={<Home />} />
@@ -56,6 +60,22 @@ function App() {
                       <CustomerRoute>
                         <Cart />
                       </CustomerRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/liked-products" 
+                    element={
+                      <ProtectedRoute>
+                        <LikedProducts />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/protein-plan" 
+                    element={
+                      <ProtectedRoute>
+                        <ProteinPlanBot />
+                      </ProtectedRoute>
                     } 
                   />
                   <Route 
@@ -135,6 +155,7 @@ function App() {
               </ErrorBoundary>
               <Toaster position="top-right" />
             </Layout>
+            </LikedProductsProvider>
           </CartProvider>
         </AuthProvider>
       </Router>

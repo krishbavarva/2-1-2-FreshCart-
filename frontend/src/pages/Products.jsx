@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getProducts, searchProducts, getCategories, toggleLike } from '../services/productService';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useLikedProducts } from '../contexts/LikedProductsContext';
 import NutriScoreBadge from '../components/common/NutriScoreBadge';
 import toast from 'react-hot-toast';
 
 const Products = () => {
   const { addToCart } = useCart();
   const { currentUser } = useAuth();
+  const { refreshCount } = useLikedProducts();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,12 +20,6 @@ const Products = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [likedProducts, setLikedProducts] = useState(new Set());
-  
-  // New filter states
-  const [proteinFilter, setProteinFilter] = useState('');
-  const [nutriscoreFilter, setNutriscoreFilter] = useState('all');
-  const [bestSellerFilter, setBestSellerFilter] = useState(false);
-  const [filterType, setFilterType] = useState('all'); // all, best-seller, high-protein, nutritious
 
   const searchInputRef = useRef(null);
 
@@ -33,7 +29,7 @@ const Products = () => {
 
   useEffect(() => {
     loadProducts();
-  }, [page, selectedCategory, proteinFilter, nutriscoreFilter, bestSellerFilter, filterType]);
+  }, [page, selectedCategory]);
 
   const loadCategories = async () => {
     try {
@@ -51,17 +47,40 @@ const Products = () => {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const filters = {
-        proteinMin: proteinFilter || undefined,
-        nutriscoreGrade: nutriscoreFilter !== 'all' ? nutriscoreFilter : undefined,
-        bestSeller: bestSellerFilter || undefined,
-        filter: filterType !== 'all' ? filterType : undefined
-      };
-      const data = await getProducts('', page, selectedCategory, filters);
-      setProducts(data.products || []);
+      const data = await getProducts('', page, selectedCategory, {});
+      console.log('📦 Full API Response:', data);
+      
+      const productsList = Array.isArray(data?.products) ? data.products : [];
+      console.log('📦 Products array:', productsList);
+      console.log('📦 Products count:', productsList.length);
+      
+      if (data?.message) {
+        console.warn('📝 Server message:', data.message);
+        toast.error(data.message, { duration: 5000 });
+      }
+      
+      setProducts(productsList);
+      
+      // Initialize liked products from API response
+      if (currentUser && productsList.length > 0) {
+        const likedSet = new Set();
+        productsList.forEach(product => {
+          if (product && product.id && product.isLiked) {
+            likedSet.add(product.id);
+          }
+        });
+        setLikedProducts(likedSet);
+      }
+      
+      if (productsList.length === 0 && !data?.message) {
+        console.warn('⚠️ No products returned from API. Database might be empty.');
+        console.warn('💡 Run: cd backend && npm run sync-products');
+      }
     } catch (error) {
-      toast.error('Failed to load products');
-      console.error('Error loading products:', error);
+      console.error('❌ Error loading products:', error);
+      console.error('❌ Error response:', error.response?.data);
+      toast.error(error.response?.data?.message || 'Failed to load products');
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -166,6 +185,9 @@ const Products = () => {
           : p
       ));
       
+      // Update liked products count in navbar
+      refreshCount();
+      
       toast.success(result.isLiked ? 'Product liked!' : 'Product unliked');
     } catch (error) {
       console.error('Error toggling like:', error);
@@ -174,6 +196,11 @@ const Products = () => {
   };
 
   const handleAddToCart = async (product) => {
+    if (!currentUser) {
+      toast.error('Please login to add items to cart');
+      return;
+    }
+
     // Check stock before adding
     if (product.stock === 0 || product.status === 'out_of_stock') {
       toast.error('This product is out of stock');
@@ -186,22 +213,25 @@ const Products = () => {
     }
 
     try {
+      console.log('🛒 Adding product to cart:', product.id, product.name);
       await addToCart(product);
+      // Success message is shown in CartContext
     } catch (error) {
-      // Error is already handled in CartContext
-      if (error.response?.status === 400) {
-        toast.error(error.response?.data?.message || 'Cannot add to cart');
-      }
+      console.error('❌ Error adding to cart:', error);
+      console.error('❌ Error response:', error.response?.data);
+      
+      // Show error message if not already handled in CartContext
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Failed to add product to cart';
+      
+      toast.error(errorMessage);
     }
   };
 
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedCategory('all');
-    setProteinFilter('');
-    setNutriscoreFilter('all');
-    setBestSellerFilter(false);
-    setFilterType('all');
     setPage(1);
   };
 
@@ -331,87 +361,14 @@ const Products = () => {
             </div>
           </div>
 
-          {/* Advanced Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
-            {/* Filter Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Filter Type</label>
-              <select
-                value={filterType}
-                onChange={(e) => {
-                  setFilterType(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-              >
-                <option value="all">All Products</option>
-                <option value="best-seller">Best Sellers</option>
-                <option value="high-protein">High Protein</option>
-                <option value="nutritious">Nutritious (A/B Grade)</option>
-              </select>
-            </div>
-
-            {/* Protein Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Min Protein (g/100g)</label>
-              <input
-                type="number"
-                value={proteinFilter}
-                onChange={(e) => {
-                  setProteinFilter(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="e.g. 10"
-                min="0"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-              />
-            </div>
-
-            {/* Nutri-Score Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Nutri-Score</label>
-              <select
-                value={nutriscoreFilter}
-                onChange={(e) => {
-                  setNutriscoreFilter(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-              >
-                <option value="all">All Grades</option>
-                <option value="A">A (Best)</option>
-                <option value="B">B (Good)</option>
-                <option value="C">C (Moderate)</option>
-                <option value="D">D (Poor)</option>
-                <option value="E">E (Worst)</option>
-              </select>
-            </div>
-
-            {/* Best Seller Toggle */}
-            <div className="flex items-end">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={bestSellerFilter}
-                  onChange={(e) => {
-                    setBestSellerFilter(e.target.checked);
-                    setPage(1);
-                  }}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
-                />
-                <span className="text-sm font-medium text-gray-700">Best Sellers Only</span>
-              </label>
-            </div>
-          </div>
-
           {/* Clear Filters Button */}
-          {(searchTerm || selectedCategory !== 'all' || proteinFilter || nutriscoreFilter !== 'all' || bestSellerFilter || filterType !== 'all') && (
+          {(searchTerm || selectedCategory !== 'all') && (
             <div className="mt-4">
               <button
                 onClick={clearFilters}
                 className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-all font-medium shadow-sm"
               >
-                Clear All Filters
+                Clear Filters
               </button>
             </div>
           )}
@@ -424,13 +381,19 @@ const Products = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No products found</h3>
-            <p className="text-gray-600 mb-6">Try adjusting your search or filter criteria</p>
-            <button
-              onClick={clearFilters}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Clear Filters
-            </button>
+            <p className="text-gray-600 mb-4">The database appears to be empty.</p>
+            <p className="text-sm text-gray-500 mb-6">
+              To sync products from Open Food Facts API, run in your terminal:<br />
+              <code className="bg-gray-100 px-3 py-1 rounded text-sm font-mono">cd backend && npm run sync-products</code>
+            </p>
+            {(searchTerm || selectedCategory !== 'all') && (
+              <button
+                onClick={clearFilters}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
