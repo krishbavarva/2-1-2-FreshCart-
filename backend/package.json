@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "nodemon app.js",
     "start": "node app.js",
-    "test": "mocha",
+    "test": "mocha tests/**/*.test.js --timeout 10000 --exit",
+    "test:unit": "mocha tests/unit/**/*.test.js --timeout 10000 --exit",
+    "test:integration": "mocha tests/integration/**/*.test.js --timeout 30000 --exit",
+    "test:performance": "mocha tests/performance/**/*.test.js --timeout 60000 --exit",
+    "test:coverage": "nyc mocha tests/**/*.test.js --timeout 10000 --exit",
     "create-admin": "node scripts/createAdmin.js",
     "create-users": "node scripts/createUsers.js",
     "sync-products": "node scripts/syncProducts.js",
@@ -36,6 +40,9 @@
   "devDependencies": {
     "chai": "^6.2.1",
     "mocha": "^11.7.5",
-    "nodemon": "^3.1.11"
+    "nodemon": "^3.1.11",
+    "nyc": "^15.1.0",
+    "supertest": "^7.0.0",
+    "sinon": "^17.0.1"
   }
 }

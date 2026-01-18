@@ -116,68 +116,57 @@ deploy:staging:
     - develop
   when: manual
 
-# Deploy to production
+# Deploy to production (GitHub Pages)
 deploy:production:
   stage: deploy
   image: node:${NODE_VERSION}
   script:
-    - echo "🚀 Deploying to production environment..."
-    - echo "⚠️ Production deployment - ensure all tests passed!"
-    - cd ${BACKEND_DIR}
-    - echo "✅ Backend ready for production deployment"
-    - cd ../${FRONTEND_DIR}
-    - echo "✅ Frontend ready for production deployment"
-    - echo "✅ Production deployment completed!"
+    - echo "🚀 GitHub Deployment Ready!"
+    - echo "📝 This project uses GitHub Actions for deployment"
+    - echo ""
+    - echo "✅ To deploy to GitHub Pages:"
+    - echo "   1. Push to GitHub: git push github main"
+    - echo "   2. GitHub Actions will automatically:"
+    - echo "      - Run all tests"
+    - echo "      - Build frontend"
+    - echo "      - Deploy to GitHub Pages"
+    - echo ""
+    - echo "🌐 Your site will be live at:"
+    - echo "   https://yourusername.github.io/your-repo-name/"
+    - echo ""
+    - echo "📋 See GITHUB_DEPLOYMENT.md for detailed instructions"
   environment:
     name: production
-    url: https://production.example.com
-  only:
-    - main
-    - master
-  when: manual
-
-# Azure Deployment - Backend
-deploy:azure:backend:
-  stage: deploy
-  image: node:${NODE_VERSION}
-  script:
-    - echo "🚀 Deploying backend to Azure App Service..."
-    - |
-      if [ -z "$AZURE_WEBAPP_NAME" ]; then
-        echo "⚠️ Azure deployment skipped - AZURE_WEBAPP_NAME not set"
-        echo "Configure in GitLab: Settings → CI/CD → Variables"
-        exit 0
-      fi
-    - cd ${BACKEND_DIR}
-    - echo "Installing Azure CLI..."
-    - curl -sL https://aka.ms/InstallAzureCLIDeb | bash || echo "Azure CLI install skipped"
-    - echo "Building backend..."
-    - npm install --legacy-peer-deps
-    - echo "✅ Backend ready for Azure deployment"
-    - echo "Configure Azure deployment in Azure Portal → Deployment Center"
+    url: https://github.com
   only:
     - main
     - master
   when: manual
   allow_failure: true
 
-# Azure Deployment - Frontend
-deploy:azure:frontend:
+# GitHub Deployment Info
+deploy:github:info:
   stage: deploy
   image: node:${NODE_VERSION}
   script:
-    - echo "🚀 Deploying frontend to Azure Static Web Apps..."
-    - cd ${FRONTEND_DIR}
-    - echo "Installing dependencies..."
-    - npm install --legacy-peer-deps
-    - echo "Building frontend..."
-    - npm run build
-    - echo "✅ Frontend build completed - ready for Azure Static Web Apps"
-    - echo "Configure Azure Static Web Apps in Azure Portal"
-  artifacts:
-    paths:
-      - ${FRONTEND_DIR}/dist/
-    expire_in: 1 week
+    - echo "🚀 GitHub Deployment Information"
+    - echo "📝 Your project is configured for GitHub deployment!"
+    - echo ""
+    - echo "✅ GitHub Actions CI/CD is set up in .github/workflows/"
+    - echo "   - ci-cd.yml: Runs tests and builds"
+    - echo "   - pages.yml: Deploys frontend to GitHub Pages"
+    - echo ""
+    - echo "📋 To deploy:"
+    - echo "   1. Push to GitHub: git push github main"
+    - echo "   2. Go to GitHub repo → Settings → Pages"
+    - echo "   3. Source: Select 'GitHub Actions'"
+    - echo "   4. Your site will deploy automatically!"
+    - echo ""
+    - echo "🌐 Frontend will be available at:"
+    - echo "   https://yourusername.github.io/your-repo-name/"
+    - echo ""
+    - echo "🔧 Backend: Deploy to free service (Render/Railway)"
+    - echo "   See FREE_DEPLOYMENT_GUIDE.md for details"
   only:
     - main
     - master
