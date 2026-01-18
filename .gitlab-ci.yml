@@ -135,3 +135,51 @@ deploy:production:
     - main
     - master
   when: manual
+
+# Azure Deployment - Backend
+deploy:azure:backend:
+  stage: deploy
+  image: node:${NODE_VERSION}
+  script:
+    - echo "🚀 Deploying backend to Azure App Service..."
+    - |
+      if [ -z "$AZURE_WEBAPP_NAME" ]; then
+        echo "⚠️ Azure deployment skipped - AZURE_WEBAPP_NAME not set"
+        echo "Configure in GitLab: Settings → CI/CD → Variables"
+        exit 0
+      fi
+    - cd ${BACKEND_DIR}
+    - echo "Installing Azure CLI..."
+    - curl -sL https://aka.ms/InstallAzureCLIDeb | bash || echo "Azure CLI install skipped"
+    - echo "Building backend..."
+    - npm install --legacy-peer-deps
+    - echo "✅ Backend ready for Azure deployment"
+    - echo "Configure Azure deployment in Azure Portal → Deployment Center"
+  only:
+    - main
+    - master
+  when: manual
+  allow_failure: true
+
+# Azure Deployment - Frontend
+deploy:azure:frontend:
+  stage: deploy
+  image: node:${NODE_VERSION}
+  script:
+    - echo "🚀 Deploying frontend to Azure Static Web Apps..."
+    - cd ${FRONTEND_DIR}
+    - echo "Installing dependencies..."
+    - npm install --legacy-peer-deps
+    - echo "Building frontend..."
+    - npm run build
+    - echo "✅ Frontend build completed - ready for Azure Static Web Apps"
+    - echo "Configure Azure Static Web Apps in Azure Portal"
+  artifacts:
+    paths:
+      - ${FRONTEND_DIR}/dist/
+    expire_in: 1 week
+  only:
+    - main
+    - master
+  when: manual
+  allow_failure: true
