@@ -144,6 +144,74 @@ deploy:production:
   when: manual
   allow_failure: true
 
+# Auto-sync to GitHub (pushes to GitHub automatically when you push to GitLab)
+sync:github:
+  stage: deploy
+  image: alpine/git:latest
+  before_script:
+    - apk add --no-cache openssh-client curl
+    - |
+      if [ -z "$GITLAB_USER_EMAIL" ]; then
+        git config --global user.email "gitlab-ci@example.com"
+      else
+        git config --global user.email "$GITLAB_USER_EMAIL"
+      fi
+    - |
+      if [ -z "$GITLAB_USER_NAME" ]; then
+        git config --global user.name "GitLab CI"
+      else
+        git config --global user.name "$GITLAB_USER_NAME"
+      fi
+  script:
+    - echo "🔄 Syncing to GitHub..."
+    - |
+      if [ -z "$GITHUB_REPO_URL" ]; then
+        echo "⚠️ GITHUB_REPO_URL not set - skipping GitHub sync"
+        echo "📝 Set GITHUB_REPO_URL in GitLab: Settings → CI/CD → Variables"
+        echo "📖 See GITLAB_TO_GITHUB_SYNC.md for setup instructions"
+        exit 0
+      fi
+    - |
+      # Method 1: Try HTTPS with token (easier - recommended)
+      if [ -n "$GITHUB_TOKEN" ]; then
+        echo "🔐 Using HTTPS method with token..."
+        GITHUB_URL_WITH_TOKEN=$(echo $GITHUB_REPO_URL | sed "s|https://|https://${GITHUB_TOKEN}@|")
+        git remote add github $GITHUB_URL_WITH_TOKEN 2>/dev/null || git remote set-url github $GITHUB_URL_WITH_TOKEN
+        git push github ${CI_COMMIT_REF_NAME} && echo "✅ HTTPS push successful!" || echo "⚠️ HTTPS push failed"
+      fi
+    - |
+      # Method 2: Try SSH (if HTTPS failed or SSH key provided)
+      if [ -n "$GITHUB_SSH_PRIVATE_KEY" ]; then
+        echo "🔐 Using SSH method..."
+        mkdir -p ~/.ssh
+        echo "$GITHUB_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+        GITHUB_SSH_URL=$(echo $GITHUB_REPO_URL | sed "s|https://github.com/|git@github.com:|" | sed "s|\.git$||").git
+        git remote add github $GITHUB_SSH_URL 2>/dev/null || git remote set-url github $GITHUB_SSH_URL
+        git push github ${CI_COMMIT_REF_NAME} && echo "✅ SSH push successful!" || echo "⚠️ SSH push failed"
+      fi
+    - |
+      # Check if sync was successful
+      if [ -z "$GITHUB_TOKEN" ] && [ -z "$GITHUB_SSH_PRIVATE_KEY" ]; then
+        echo "⚠️ No GitHub credentials found"
+        echo "📝 Please set either GITHUB_TOKEN or GITHUB_SSH_PRIVATE_KEY"
+        echo "📖 See GITLAB_TO_GITHUB_SYNC.md for instructions"
+        exit 0
+      fi
+    - echo "✅ Successfully synced to GitHub!"
+    - echo "🌐 GitHub Actions will now run automatically"
+    - |
+      if [ -n "$GITHUB_REPO_URL" ]; then
+        REPO_NAME=$(echo $GITHUB_REPO_URL | sed 's|.*github.com/||' | sed 's|\.git$||')
+        echo "📋 Check GitHub Actions: https://github.com/$REPO_NAME/actions"
+      fi
+  only:
+    - main
+    - master
+  when: on_success
+  allow_failure: true
+
 # GitHub Deployment Info
 deploy:github:info:
   stage: deploy
@@ -152,21 +220,18 @@ deploy:github:info:
     - echo "🚀 GitHub Deployment Information"
     - echo "📝 Your project is configured for GitHub deployment!"
     - echo ""
+    - echo "✅ Auto-sync enabled: Code pushed to GitLab will auto-sync to GitHub"
     - echo "✅ GitHub Actions CI/CD is set up in .github/workflows/"
     - echo "   - ci-cd.yml: Runs tests and builds"
     - echo "   - pages.yml: Deploys frontend to GitHub Pages"
     - echo ""
-    - echo "📋 To deploy:"
-    - echo "   1. Push to GitHub: git push github main"
-    - echo "   2. Go to GitHub repo → Settings → Pages"
-    - echo "   3. Source: Select 'GitHub Actions'"
-    - echo "   4. Your site will deploy automatically!"
+    - echo "📋 Setup GitHub sync:"
+    - echo "   1. Go to GitLab: Settings → CI/CD → Variables"
+    - echo "   2. Add variable: GITHUB_REPO_URL = https://github.com/username/repo.git"
+    - echo "   3. Add variable: GITHUB_SSH_PRIVATE_KEY = (your GitHub SSH private key)"
     - echo ""
-    - echo "🌐 Frontend will be available at:"
-    - echo "   https://yourusername.github.io/your-repo-name/"
-    - echo ""
-    - echo "🔧 Backend: Deploy to free service (Render/Railway)"
-    - echo "   See FREE_DEPLOYMENT_GUIDE.md for details"
+    - echo "🌐 After sync, GitHub Actions will deploy automatically!"
+    - echo "   Frontend: https://yourusername.github.io/your-repo-name/"
   only:
     - main
     - master
