@@ -11,9 +11,30 @@ import {
 
 const router = express.Router();
 
+// Log route registration
+console.log('✅ Rider routes module loaded');
+
+// Health check endpoint (no auth required)
+router.get('/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    message: 'Rider routes are working',
+    routes: [
+      'GET /api/rider/orders (requires auth)',
+      'GET /api/rider/orders/:id (requires auth)',
+      'PUT /api/rider/orders/:id/status (requires auth)',
+      'GET /api/rider/products (requires auth)',
+      'GET /api/rider/statistics (requires auth)'
+    ]
+  });
+});
+
 // All rider routes require authentication and rider role or higher
 router.use(authenticate);
 router.use(isRider);
+
+// Log middleware setup
+console.log('✅ Rider middleware configured');
 
 /**
  * @swagger
@@ -24,7 +45,10 @@ router.use(isRider);
  *     security:
  *       - bearerAuth: []
  */
-router.get('/orders', getAllOrders);
+router.get('/orders', (req, res, next) => {
+  console.log('📦 Rider orders route hit:', req.method, req.originalUrl);
+  next();
+}, getAllOrders);
 
 /**
  * @swagger
@@ -68,7 +92,10 @@ router.get('/products', getProducts);
  *     security:
  *       - bearerAuth: []
  */
-router.get('/statistics', getStockStats);
+router.get('/statistics', (req, res, next) => {
+  console.log('📊 Rider statistics route hit:', req.method, req.originalUrl);
+  next();
+}, getStockStats);
 
 export default router;
 

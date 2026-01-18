@@ -150,7 +150,10 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/customer', customerRoutes);
-app.use('/api/rider', riderRoutes);
+app.use('/api/rider', (req, res, next) => {
+  console.log(`🔍 Rider route matched: ${req.method} ${req.originalUrl}`);
+  next();
+}, riderRoutes);
 app.use('/api/manager', managerRoutes);
 
 // Log payment routes registration
@@ -207,13 +210,23 @@ app.use((req, res, next) => {
 // 404 handler
 app.use((req, res) => {
   console.log(`❌ 404 - Route not found: ${req.method} ${req.originalUrl}`);
+  console.log(`   Path: ${req.path}`);
+  console.log(`   Base URL: ${req.baseUrl}`);
   console.log(`   Expected routes include:`);
+  console.log(`   - GET /api/rider/orders`);
+  console.log(`   - GET /api/rider/statistics`);
+  console.log(`   - GET /api/rider/products`);
+  console.log(`   - GET /api/rider/orders/:id`);
+  console.log(`   - PUT /api/rider/orders/:id/status`);
   console.log(`   - POST /api/products/protein-plan`);
   console.log(`   - POST /api/payment/create-intent`);
   console.log(`   - POST /api/payment/confirm`);
   res.status(404).json({ 
     error: 'Not Found',
-    message: `Route ${req.method} ${req.path} not found. Make sure the backend server has been restarted after adding new routes.`
+    message: `Route ${req.method} ${req.path} not found. Make sure the backend server has been restarted after adding new routes.`,
+    path: req.path,
+    method: req.method,
+    originalUrl: req.originalUrl
   });
 });
 
