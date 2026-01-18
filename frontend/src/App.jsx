@@ -20,6 +20,7 @@ import ProductManagement from './pages/admin/ProductManagement';
 import OrderNewItems from './pages/admin/OrderNewItems';
 import UserManagement from './pages/admin/UserManagement';
 import CreateUser from './pages/admin/CreateUser';
+import AdminOrders from './pages/admin/AdminOrders';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import AdminRoute from './components/common/AdminRoute';
 import EmployeeRoute from './components/common/EmployeeRoute';
@@ -147,6 +148,14 @@ function App() {
                     element={
                       <AdminRoute>
                         <CreateUser />
+                      </AdminRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin/orders" 
+                    element={
+                      <AdminRoute>
+                        <AdminOrders />
                       </AdminRoute>
                     } 
                   />

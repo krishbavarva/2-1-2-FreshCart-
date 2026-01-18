@@ -82,7 +82,7 @@ const Header = () => {
                     <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all duration-300"></span>
                   </Link>
                 )}
-                {userIsEmployee && (
+                {userIsEmployee && !userIsAdmin && (
                   <Link 
                     to="/employee" 
                     className="text-white hover:text-orange-400 font-semibold transition-all duration-200 relative group"
@@ -91,7 +91,7 @@ const Header = () => {
                     <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all duration-300"></span>
                   </Link>
                 )}
-                {userIsManager && (
+                {userIsManager && !userIsAdmin && (
                   <Link 
                     to="/manager" 
                     className="text-white hover:text-orange-400 font-semibold transition-all duration-200 relative group"
@@ -109,14 +109,34 @@ const Header = () => {
                     <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all duration-300"></span>
                   </Link>
                 )}
-                {/* Orders link - show for all authenticated users */}
-                <Link 
-                  to="/orders" 
-                  className="text-white hover:text-orange-400 font-semibold transition-all duration-200 relative group"
-                >
-                  Orders
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all duration-300"></span>
-                </Link>
+                {/* Orders link - role-aware */}
+                {userIsCustomer && (
+                  <Link 
+                    to="/orders" 
+                    className="text-white hover:text-orange-400 font-semibold transition-all duration-200 relative group"
+                  >
+                    Orders
+                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all duration-300"></span>
+                  </Link>
+                )}
+                {userIsAdmin && (
+                  <Link 
+                    to="/admin/orders" 
+                    className="text-white hover:text-orange-400 font-semibold transition-all duration-200 relative group"
+                  >
+                    Customer Orders
+                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all duration-300"></span>
+                  </Link>
+                )}
+                {(userIsManager || userIsEmployee) && (
+                  <Link 
+                    to={userIsManager ? "/manager" : "/employee"} 
+                    className="text-white hover:text-orange-400 font-semibold transition-all duration-200 relative group"
+                  >
+                    Orders
+                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all duration-300"></span>
+                  </Link>
+                )}
                 {/* Liked Products - for all authenticated users */}
                 {currentUser && (
                   <Link 
@@ -238,7 +258,7 @@ const Header = () => {
                       Dashboard
                     </Link>
                   )}
-                  {userIsEmployee && (
+                  {userIsEmployee && !userIsAdmin && (
                     <Link 
                       to="/employee" 
                       className="text-gray-700 hover:text-blue-600 font-semibold px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
@@ -247,7 +267,7 @@ const Header = () => {
                       Employee
                     </Link>
                   )}
-                  {userIsManager && (
+                  {userIsManager && !userIsAdmin && (
                     <Link 
                       to="/manager" 
                       className="text-gray-700 hover:text-blue-600 font-semibold px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
@@ -265,13 +285,33 @@ const Header = () => {
                       Admin
                     </Link>
                   )}
-                  <Link 
-                    to="/orders" 
-                    className="text-gray-700 hover:text-blue-600 font-semibold px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Orders
-                  </Link>
+                  {userIsCustomer && (
+                    <Link 
+                      to="/orders" 
+                      className="text-gray-700 hover:text-blue-600 font-semibold px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Orders
+                    </Link>
+                  )}
+                  {userIsAdmin && (
+                    <Link 
+                      to="/admin/orders" 
+                      className="text-gray-700 hover:text-blue-600 font-semibold px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Customer Orders
+                    </Link>
+                  )}
+                  {(userIsManager || userIsEmployee) && (
+                    <Link 
+                      to={userIsManager ? "/manager" : "/employee"} 
+                      className="text-gray-700 hover:text-blue-600 font-semibold px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Orders
+                    </Link>
+                  )}
                   {/* Liked Products - for all authenticated users */}
                   {currentUser && (
                     <Link 
