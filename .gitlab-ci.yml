@@ -1,6 +1,3 @@
-# GitLab CI/CD Pipeline Configuration
-# This pipeline runs tests and deploys both frontend and backend
-
 stages:
   - test
   - build
@@ -11,66 +8,50 @@ variables:
   BACKEND_DIR: "backend"
   FRONTEND_DIR: "frontend"
 
-# Cache node_modules for faster builds
 cache:
   paths:
     - backend/node_modules/
     - frontend/node_modules/
 
-# Backend Tests
 backend:test:
   stage: test
   image: node:${NODE_VERSION}
   script:
     - cd ${BACKEND_DIR}
-    - echo "Installing backend dependencies..."
     - npm install --legacy-peer-deps || npm install
-    - echo "Running backend tests..."
-    - npm test 2>&1 || echo "No tests configured yet - skipping"
+    - npm test || echo "No tests configured"
   only:
     - branches
-    - merge_requests
   allow_failure: true
 
-# Frontend Tests
 frontend:test:
   stage: test
   image: node:${NODE_VERSION}
   script:
     - cd ${FRONTEND_DIR}
-    - echo "Installing frontend dependencies..."
     - npm install --legacy-peer-deps || npm install
-    - echo "Running frontend tests..."
-    - npm test 2>&1 || echo "No tests configured yet - skipping"
+    - npm test || echo "No tests configured"
   only:
     - branches
-    - merge_requests
   allow_failure: true
 
-# Backend Lint Check
 backend:lint:
   stage: test
   image: node:${NODE_VERSION}
   script:
     - cd ${BACKEND_DIR}
-    - echo "Checking backend code quality..."
-    - npm run lint 2>&1 || echo "Linter not configured - skipping"
+    - npm run lint || echo "Linter not configured"
   only:
     - branches
-    - merge_requests
   allow_failure: true
 
-# Frontend Build
 frontend:build:
   stage: build
   image: node:${NODE_VERSION}
   script:
     - cd ${FRONTEND_DIR}
-    - echo "Installing frontend dependencies..."
     - npm install --legacy-peer-deps || npm install
-    - echo "Building frontend..."
-    - npm run build || (echo "Build failed - check for errors above" && exit 1)
-    - echo "Frontend build completed successfully!"
+    - npm run build
   artifacts:
     paths:
       - ${FRONTEND_DIR}/dist/
@@ -79,39 +60,24 @@ frontend:build:
     - main
     - master
     - develop
-  allow_failure: false
 
-# Backend Build Check
 backend:build:
   stage: build
   image: node:${NODE_VERSION}
   script:
     - cd ${BACKEND_DIR}
-    - echo "Installing backend dependencies..."
     - npm install --legacy-peer-deps || npm install
-    - echo "Checking backend build..."
-    - node -c app.js || (echo "Syntax error in app.js" && exit 1)
-    - echo "Backend syntax check passed"
-    - echo "Backend build check completed!"
+    - node -c app.js
   only:
     - main
     - master
     - develop
-  allow_failure: false
 
-# Deploy to staging
 deploy:staging:
   stage: deploy
   image: node:${NODE_VERSION}
   script:
-    - echo "Deploying to staging environment..."
-    - echo "Backend deployment..."
-    - cd ${BACKEND_DIR}
-    - echo "Backend ready for deployment"
-    - echo "Frontend deployment..."
-    - cd ../${FRONTEND_DIR}
-    - echo "Frontend ready for deployment"
-    - echo "Staging deployment completed!"
+    - echo "Deploying to staging"
   environment:
     name: staging
     url: https://staging.example.com
@@ -119,17 +85,12 @@ deploy:staging:
     - develop
   when: manual
 
-# Deploy to production (GitHub Pages)
 deploy:production:
   stage: deploy
   image: node:${NODE_VERSION}
   script:
-    - echo "GitHub Deployment Ready!"
-    - echo "This project uses GitHub Actions for deployment"
-    - echo "To deploy: Push to GitHub: git push github main"
-    - echo "GitHub Actions will run tests, build frontend, and deploy to GitHub Pages"
-    - echo "Your site will be live at: https://yourusername.github.io/your-repo-name/"
-    - echo "See GITHUB_DEPLOYMENT.md for detailed instructions"
+    - echo "GitHub Deployment Ready"
+    - echo "Push to GitHub: git push github main"
   environment:
     name: production
     url: https://github.com
@@ -139,7 +100,6 @@ deploy:production:
   when: manual
   allow_failure: true
 
-# Auto-sync to GitHub (pushes to GitHub automatically when you push to GitLab)
 sync:github:
   stage: deploy
   image: alpine/git:latest
@@ -158,45 +118,27 @@ sync:github:
         git config --global user.name "$GITLAB_USER_NAME"
       fi
   script:
-    - echo "Syncing to GitHub..."
+    - echo "Syncing to GitHub"
     - |
       if [ -z "$GITHUB_REPO_URL" ]; then
-        echo "GITHUB_REPO_URL not set - skipping GitHub sync"
-        echo "Set GITHUB_REPO_URL in GitLab: Settings -> CI/CD -> Variables"
-        echo "See GITLAB_TO_GITHUB_SYNC.md for setup instructions"
+        echo "GITHUB_REPO_URL not set"
         exit 0
       fi
     - |
       if [ -n "$GITHUB_TOKEN" ]; then
-        echo "Using HTTPS method with token..."
         GITHUB_URL_WITH_TOKEN=$(echo $GITHUB_REPO_URL | sed "s|https://|https://${GITHUB_TOKEN}@|")
         git remote add github $GITHUB_URL_WITH_TOKEN 2>/dev/null || git remote set-url github $GITHUB_URL_WITH_TOKEN
-        git push github ${CI_COMMIT_REF_NAME} && echo "HTTPS push successful!" || echo "HTTPS push failed"
+        git push github ${CI_COMMIT_REF_NAME} || true
       fi
     - |
       if [ -n "$GITHUB_SSH_PRIVATE_KEY" ]; then
-        echo "Using SSH method..."
         mkdir -p ~/.ssh
         echo "$GITHUB_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
         GITHUB_SSH_URL=$(echo $GITHUB_REPO_URL | sed "s|https://github.com/|git@github.com:|" | sed "s|\.git$||").git
         git remote add github $GITHUB_SSH_URL 2>/dev/null || git remote set-url github $GITHUB_SSH_URL
-        git push github ${CI_COMMIT_REF_NAME} && echo "SSH push successful!" || echo "SSH push failed"
-      fi
-    - |
-      if [ -z "$GITHUB_TOKEN" ] && [ -z "$GITHUB_SSH_PRIVATE_KEY" ]; then
-        echo "No GitHub credentials found"
-        echo "Please set either GITHUB_TOKEN or GITHUB_SSH_PRIVATE_KEY"
-        echo "See GITLAB_TO_GITHUB_SYNC.md for instructions"
-        exit 0
-      fi
-    - echo "Successfully synced to GitHub!"
-    - echo "GitHub Actions will now run automatically"
-    - |
-      if [ -n "$GITHUB_REPO_URL" ]; then
-        REPO_NAME=$(echo $GITHUB_REPO_URL | sed 's|.*github.com/||' | sed 's|\.git$||')
-        echo "Check GitHub Actions: https://github.com/$REPO_NAME/actions"
+        git push github ${CI_COMMIT_REF_NAME} || true
       fi
   only:
     - main
@@ -204,18 +146,12 @@ sync:github:
   when: on_success
   allow_failure: true
 
-# GitHub Deployment Info
 deploy:github:info:
   stage: deploy
   image: node:${NODE_VERSION}
   script:
     - echo "GitHub Deployment Information"
-    - echo "Your project is configured for GitHub deployment!"
-    - echo "Auto-sync enabled: Code pushed to GitLab will auto-sync to GitHub"
-    - echo "GitHub Actions CI/CD is set up in .github/workflows/"
-    - echo "Setup GitHub sync: Go to GitLab Settings -> CI/CD -> Variables"
-    - echo "Add GITHUB_REPO_URL and GITHUB_SSH_PRIVATE_KEY variables"
-    - echo "After sync, GitHub Actions will deploy automatically!"
+    - echo "Setup GitHub sync in GitLab Settings"
   only:
     - main
     - master
